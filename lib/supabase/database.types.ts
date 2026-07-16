@@ -181,6 +181,12 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
       };
+      
     };
+   Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>; 
   };
+  
 }
