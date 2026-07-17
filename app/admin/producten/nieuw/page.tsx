@@ -46,6 +46,7 @@ export default function NieuwProductPage() {
   const [affiliateUrl,  setAffiliateUrl]  = useState("");
   const [afbeeldingUrl, setAfbeeldingUrl] = useState("");
   const [uitleg,        setUitleg]        = useState("");
+  const [score,         setScore]         = useState("4.0");
   const [actief,        setActief]        = useState(true);
 
   // Multi-select state
@@ -102,6 +103,7 @@ export default function NieuwProductPage() {
       affiliate_url: affiliateUrl,
       afbeelding_url: afbeeldingUrl || null,
       uitleg: uitleg || null,
+      score: parseFloat(score) || 0,
       actief,
     });
 
@@ -200,6 +202,7 @@ export default function NieuwProductPage() {
           </p>
           <FormVeld label="Afbeelding URL" naam="afbeelding" type="url" waarde={afbeeldingUrl} onChange={(v) => setAfbeeldingUrl(v as string)} placeholder="https://..." hulptekst="URL van productafbeelding (Supabase Storage of extern)" />
           <FormVeld label="Uitleg voor gebruiker" naam="uitleg" type="textarea" waarde={uitleg} onChange={(v) => setUitleg(v as string)} placeholder="Waarom is dit product geschikt voor de gebruiker?" />
+          <FormVeld label="Kwaliteitsscore (0–5)" naam="score" type="number" waarde={score} onChange={(v) => setScore(v as string)} placeholder="4.0" hulptekst="Beïnvloedt de ranking binnen een categorie — hoger scorende producten worden vaker als 'beste match' getoond" />
           <FormVeld label="Actief (zichtbaar in configurator)" naam="actief" type="checkbox" waarde={actief} onChange={(v) => setActief(v as boolean)} />
         </div>
 

@@ -134,7 +134,7 @@ function LivePackagePanel() {
   );
 }
 
-export function Hero() {
+export function Hero({ aantalSporten }: { aantalSporten: number }) {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Achtergrond gradient */}
@@ -193,7 +193,7 @@ export function Hero() {
             {/* Social proof */}
             <p className="mt-8 text-brand-muted text-xs font-mono">
               Al{" "}
-              <span className="text-brand-gold">8 sporten</span>{" "}
+              <span className="text-brand-gold">{aantalSporten} {aantalSporten === 1 ? "sport" : "sporten"}</span>{" "}
               beschikbaar · Gratis · Geen account nodig
             </p>
           </div>

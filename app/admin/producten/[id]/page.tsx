@@ -51,6 +51,7 @@ export default function BewerkProductPage() {
   const [affiliateUrl,  setAffiliateUrl]  = useState("");
   const [afbeeldingUrl, setAfbeeldingUrl] = useState("");
   const [uitleg,        setUitleg]        = useState("");
+  const [score,         setScore]         = useState("4.0");
   const [actief,        setActief]        = useState(true);
   const [geselecteerdeNiveaus,     setGeselecteerdeNiveaus]     = useState<string[]>([]);
   const [geselecteerdeFrequenties, setGeselecteerdeFrequenties] = useState<string[]>([]);
@@ -75,6 +76,7 @@ export default function BewerkProductPage() {
         setAffiliateUrl(product.affiliate_url);
         setAfbeeldingUrl(product.afbeelding_url ?? "");
         setUitleg(product.uitleg ?? "");
+        setScore(String(product.score ?? 4.0));
         setActief(product.actief);
         setGeselecteerdeNiveaus(product.niveau ?? []);
         setGeselecteerdeFrequenties(product.geschikt_voor_frequentie ?? []);
@@ -112,6 +114,7 @@ export default function BewerkProductPage() {
       affiliate_url: affiliateUrl,
       afbeelding_url: afbeeldingUrl || null,
       uitleg: uitleg || null,
+      score: parseFloat(score) || 0,
       actief,
       geclassificeerd: true,
     }).eq("id", id);
@@ -190,6 +193,7 @@ export default function BewerkProductPage() {
           <p className="text-brand-gold text-xs font-mono uppercase tracking-widest border-b border-brand-border pb-2">Presentatie</p>
           <FormVeld label="Afbeelding URL" naam="afbeelding" type="url" waarde={afbeeldingUrl} onChange={(v) => setAfbeeldingUrl(v as string)} />
           <FormVeld label="Uitleg voor gebruiker" naam="uitleg" type="textarea" waarde={uitleg} onChange={(v) => setUitleg(v as string)} />
+          <FormVeld label="Kwaliteitsscore (0–5)" naam="score" type="number" waarde={score} onChange={(v) => setScore(v as string)} hulptekst="Beïnvloedt de ranking binnen een categorie" />
           <FormVeld label="Actief" naam="actief" type="checkbox" waarde={actief} onChange={(v) => setActief(v as boolean)} />
         </div>
 

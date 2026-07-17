@@ -4,10 +4,18 @@ import { CookieBanner } from "@/components/legal/CookieBanner";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://startsport.nl"),
   title: "StartSport — Vind jouw perfecte sportuitrusting",
   description:
-    "StartSport helpt je in enkele stappen naar een compleet, persoonlijk samengesteld sportpakket.", 
-    other: {"9842094c5e98067": "9e46039e18af18b892e27c5590630fb5",}
+    "StartSport helpt je in enkele stappen naar een compleet, persoonlijk samengesteld sportpakket.",
+  openGraph: {
+    title: "StartSport — Vind jouw perfecte sportuitrusting",
+    description: "Beantwoord een paar vragen en ontvang een persoonlijk sportpakket.",
+    url: "https://startsport.nl",
+    siteName: "StartSport",
+    locale: "nl_NL",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
