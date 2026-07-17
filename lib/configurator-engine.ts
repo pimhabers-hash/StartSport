@@ -144,6 +144,46 @@ function selecteerPerCategorie(producten: PakketProduct[]): PakketProduct[] {
   );
 }
 
+export interface CategorieOpties {
+  category: { id: string; naam: string; slug: string };
+  opties: PakketProduct[]; // gesorteerd op match_score, beste eerst
+}
+
+/**
+ * Groepeert alle producten per categorie en geeft binnen elke categorie
+ * de top N opties terug (gesorteerd op match), in plaats van alleen de
+ * winnaar. Dit voedt de interactieve pakket-builder op de resultaatpagina,
+ * waar de gebruiker zelf tussen suggesties per categorie kan wisselen.
+ */
+export function groepeerPerCategorieMetOpties(
+  alleProducten: ProductMatcher[],
+  input: ConfiguratorInput,
+  maxOptiesPerCategorie = 4
+): CategorieOpties[] {
+  const gescoord: PakketProduct[] = alleProducten.map((p) => ({
+    ...p,
+    match_score: berekenMatchScore(p, input),
+  }));
+
+  const perCategorie = new Map<string, PakketProduct[]>();
+  for (const product of gescoord) {
+    const lijst = perCategorie.get(product.category.id) ?? [];
+    lijst.push(product);
+    perCategorie.set(product.category.id, lijst);
+  }
+
+  const resultaat: CategorieOpties[] = [];
+  for (const [, producten] of perCategorie) {
+    const gesorteerd = producten.sort((a, b) => b.match_score - a.match_score);
+    resultaat.push({
+      category: gesorteerd[0].category,
+      opties: gesorteerd.slice(0, maxOptiesPerCategorie),
+    });
+  }
+
+  return resultaat.sort((a, b) => a.category.naam.localeCompare(b.category.naam));
+}
+
 function berekenAlternatief(
   alleProducten: ProductMatcher[],
   input: ConfiguratorInput,

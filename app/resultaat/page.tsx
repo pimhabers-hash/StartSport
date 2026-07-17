@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { berekenPakket } from "@/lib/configurator-engine";
+import { groepeerPerCategorieMetOpties } from "@/lib/configurator-engine";
 import { Navbar } from "@/components/home/Navbar";
-import { ProductKaart } from "@/components/resultaat/ProductKaart";
+import { PakketBuilder } from "@/components/resultaat/PakketBuilder";
 import type { ErvaringNiveau, BudgetKlasse, GebruikFrequentie, BinnenBuiten } from "@/lib/supabase/database.types";
 import type { Doel } from "@/lib/configurator-engine";
 
@@ -18,7 +18,7 @@ const LABEL: Record<string, string> = {
   recreatief: "Recreatief", wekelijks: "Wekelijks", intensief: "Intensief",
   binnen: "Binnen", buiten: "Buiten", beide: "Binnen & buiten",
   gezond_blijven: "Gezond blijven", afvallen: "Afvallen",
-  competitie_doel: "Competitie", sociaal: "Sociaal", prestatie: "Beter worden",
+  sociaal: "Sociaal", prestatie: "Beter worden",
 };
 
 export default async function ResultaatPage({ searchParams }: PageProps) {
@@ -79,7 +79,7 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
     provider: Array.isArray(p.providers) ? p.providers[0] : p.providers as { naam: string; logo_url: string | null } | null,
   }));
 
-  const resultaat = berekenPakket(producten, {
+  const categorieOpties = groepeerPerCategorieMetOpties(producten, {
     sport_id,
     sport_slug: params.sport_slug ?? "",
     niveau: niveau as ErvaringNiveau,
@@ -95,10 +95,10 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
     <>
       <Navbar />
       <main className="min-h-screen bg-brand-black pt-24 pb-20 px-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
 
           {/* Header */}
-          <div className="mb-12 animate-fade-up">
+          <div className="mb-10 animate-fade-up">
             <p className="font-mono text-brand-gold text-xs uppercase tracking-widest mb-3">
               Jouw persoonlijke pakket
             </p>
@@ -108,74 +108,32 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
                 {LABEL[niveau] ?? niveau}
               </em>
             </h1>
-
-            {/* Chips */}
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-2">
               {chips.map((v) => (
                 <span key={v} className="px-3 py-1 rounded-full border border-brand-gold/30 text-brand-gold text-xs font-mono">
                   {LABEL[v!] ?? v}
                 </span>
               ))}
             </div>
-
-            {/* Totaalprijs */}
-            {resultaat.producten.length > 0 && (
-              <div className="inline-flex items-baseline gap-2 px-5 py-3 rounded-xl card-surface">
-                <span className="text-brand-muted text-sm font-body">Totaal indicatief</span>
-                <span className="font-mono text-3xl font-medium text-brand-gold">
-                  €{resultaat.totaalprijs.toFixed(2).replace(".", ",")}
-                </span>
-              </div>
-            )}
+            <p className="text-brand-muted text-sm font-body max-w-xl mt-3">
+              Voor elke categorie tonen we onze beste match, plus alternatieven. Klik op een
+              suggestie om die te wisselen in je pakket rechts.
+            </p>
           </div>
 
-          {/* Hoofdpakket */}
-          {resultaat.producten.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-16">
-              {resultaat.producten.map((product) => (
-                <ProductKaart key={product.id} product={product} />
-              ))}
-            </div>
+          {/* Interactieve pakket-builder */}
+          {categorieOpties.length > 0 ? (
+            <PakketBuilder categorieOpties={categorieOpties} />
           ) : (
-            <div className="card-surface rounded-2xl p-12 text-center mb-16">
+            <div className="card-surface rounded-2xl p-12 text-center">
               <p className="text-brand-muted font-body">
-                Geen exacte matches gevonden voor dit profiel. Probeer een ander budget of niveau.
+                Geen producten gevonden voor dit profiel. Probeer een ander budget of niveau.
               </p>
             </div>
           )}
 
-          {/* Alternatieven */}
-          {(resultaat.alternatief_goedkoper.length > 0 || resultaat.alternatief_premium.length > 0) && (
-            <div className="border-t border-brand-border pt-12 mb-12">
-              <h2 className="font-display text-2xl text-brand-ivory mb-2">Alternatieven</h2>
-              <p className="text-brand-muted text-sm font-body mb-8">Andere budgetklassen voor dezelfde sport en hetzelfde niveau.</p>
-              <div className="grid md:grid-cols-2 gap-8">
-                {resultaat.alternatief_goedkoper.length > 0 && (
-                  <div>
-                    <p className="font-mono text-xs text-brand-muted uppercase tracking-widest mb-4">💶 Budgetvriendelijker</p>
-                    <div className="space-y-3">
-                      {resultaat.alternatief_goedkoper.slice(0, 4).map((p) => (
-                        <MiniRij key={p.id} product={p} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {resultaat.alternatief_premium.length > 0 && (
-                  <div>
-                    <p className="font-mono text-xs text-brand-muted uppercase tracking-widest mb-4">💎 Premium upgrade</p>
-                    <div className="space-y-3">
-                      {resultaat.alternatief_premium.slice(0, 4).map((p) => (
-                        <MiniRij key={p.id} product={p} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Opnieuw */}
-          <div className="text-center">
+          <div className="text-center mt-16">
             <Link
               href="/configurator"
               className="inline-flex items-center gap-2 text-brand-muted text-sm font-body hover:text-brand-ivory transition-colors"
@@ -190,24 +148,5 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
         </div>
       </main>
     </>
-  );
-}
-
-function MiniRij({ product }: { product: { naam: string; prijs: number; affiliate_url: string; category: { naam: string } } }) {
-  return (
-    <a
-      href={product.affiliate_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center justify-between p-3 rounded-xl card-surface hover:border-brand-gold/30 transition-colors group"
-    >
-      <div>
-        <p className="text-brand-muted text-xs font-mono mb-0.5">{product.category.naam}</p>
-        <p className="text-brand-ivory text-sm font-body group-hover:text-brand-gold transition-colors">{product.naam}</p>
-      </div>
-      <span className="font-mono text-brand-gold text-sm ml-4 flex-shrink-0">
-        €{product.prijs.toFixed(2).replace(".", ",")}
-      </span>
-    </a>
   );
 }
