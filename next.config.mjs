@@ -4,8 +4,31 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        // Supabase Storage — pas dit aan zodra je je eigen project-URL hebt
         hostname: "*.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "media.s-bol.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.bol.com",
+      },
+      {
+        protocol: "https",
+        hostname: "assets.adidas.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.nike.com",
+      },
+      {
+        protocol: "https",
+        hostname: "static.decathlon.com",
+      },
+      {
+        protocol: "https",
+        hostname: "contents.mediadecathlon.com",
       },
     ],
   },
