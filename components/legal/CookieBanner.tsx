@@ -35,8 +35,10 @@ export function CookieBanner() {
     );
     setZichtbaar(false);
 
-    // Hier zou je later analytics/marketing scripts conditioneel laden,
-    // bijvoorbeeld: if (voork.analytics) { laad GA4 script }
+    // Laat andere componenten (zoals GoogleAnalytics) weten dat de
+    // consent-status is gewijzigd, zodat scripts direct kunnen laden
+    // zonder dat de pagina herladen hoeft te worden.
+    window.dispatchEvent(new Event("cookie-consent-updated"));
   }
 
   function accepteerAlles() {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CookieBanner } from "@/components/legal/CookieBanner";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 
 export const metadata: Metadata = {
   title: "StartSport — Vind jouw perfecte sportuitrusting",
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-white text-gray-900 antialiased">
         {children}
         <CookieBanner />
+        <GoogleAnalytics />
       </body>
     </html>
   );

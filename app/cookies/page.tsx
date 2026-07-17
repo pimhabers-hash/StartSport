@@ -7,7 +7,7 @@ const COOKIE_TABEL = [
   { naam: "ss_session", categorie: "Noodzakelijk", doel: "Onthoudt je sessie voor affiliate-klik toewijzing", bewaartermijn: "30 dagen" },
   { naam: "startsport_cookie_consent", categorie: "Noodzakelijk", doel: "Onthoudt je cookie-voorkeuren", bewaartermijn: "1 jaar" },
   { naam: "sb-access-token", categorie: "Noodzakelijk", doel: "Houdt admin-sessies actief (Supabase Auth)", bewaartermijn: "Sessie" },
-  { naam: "_ga (indien geaccepteerd)", categorie: "Analytics", doel: "Google Analytics — meet bezoekersgedrag", bewaartermijn: "2 jaar" },
+  { naam: "_ga, _ga_XXXXXXX (indien geaccepteerd)", categorie: "Analytics", doel: "Google Analytics — meet bezoekersgedrag, geanonimiseerd IP", bewaartermijn: "2 jaar" },
 ];
 
 export default function CookiesPage() {
