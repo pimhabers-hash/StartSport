@@ -1,14 +1,3 @@
-/**
- * Deze types zijn handmatig geschreven op basis van het schema uit Fase 2.
- *
- * Zodra je de Supabase CLI geïnstalleerd hebt, kun je dit bestand
- * automatisch laten genereren en actueel houden met:
- *
- *   npm run types:generate
- *
- * Tot die tijd werkt dit bestand prima als basis.
- */
-
 export type ErvaringNiveau = "beginner" | "gemiddeld" | "gevorderd" | "competitie";
 export type BudgetKlasse = "budget" | "middenklasse" | "premium";
 export type GebruikFrequentie = "recreatief" | "wekelijks" | "intensief";
@@ -37,6 +26,7 @@ export interface Database {
           slug: string;
         };
         Update: Partial<Database["public"]["Tables"]["sports"]["Row"]>;
+        Relationships: [];
       };
       categories: {
         Row: {
@@ -52,6 +42,7 @@ export interface Database {
           slug: string;
         };
         Update: Partial<Database["public"]["Tables"]["categories"]["Row"]>;
+        Relationships: [];
       };
       providers: {
         Row: {
@@ -68,6 +59,7 @@ export interface Database {
           slug: string;
         };
         Update: Partial<Database["public"]["Tables"]["providers"]["Row"]>;
+        Relationships: [];
       };
       products: {
         Row: {
@@ -102,6 +94,29 @@ export interface Database {
           affiliate_url: string;
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "products_sport_id_fkey";
+            columns: ["sport_id"];
+            isOneToOne: false;
+            referencedRelation: "sports";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "products_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "products_provider_id_fkey";
+            columns: ["provider_id"];
+            isOneToOne: false;
+            referencedRelation: "providers";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       packages: {
         Row: {
@@ -120,6 +135,15 @@ export interface Database {
           pakket_niveau: PakketNiveau;
         };
         Update: Partial<Database["public"]["Tables"]["packages"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "packages_sport_id_fkey";
+            columns: ["sport_id"];
+            isOneToOne: false;
+            referencedRelation: "sports";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       package_items: {
         Row: {
@@ -134,6 +158,22 @@ export interface Database {
           product_id: string;
         };
         Update: Partial<Database["public"]["Tables"]["package_items"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "package_items_package_id_fkey";
+            columns: ["package_id"];
+            isOneToOne: false;
+            referencedRelation: "packages";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "package_items_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       configurator_results: {
         Row: {
@@ -155,6 +195,15 @@ export interface Database {
           frequentie: GebruikFrequentie;
         };
         Update: Partial<Database["public"]["Tables"]["configurator_results"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "configurator_results_sport_id_fkey";
+            columns: ["sport_id"];
+            isOneToOne: false;
+            referencedRelation: "sports";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       affiliate_clicks: {
         Row: {
@@ -169,6 +218,15 @@ export interface Database {
           product_id: string;
         };
         Update: Partial<Database["public"]["Tables"]["affiliate_clicks"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_clicks_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       profiles: {
         Row: {
@@ -180,13 +238,12 @@ export interface Database {
           id: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
+        Relationships: [];
       };
-      
     };
-  Views: Record<string, never>;
-  Functions: Record<string, never>;
-  Enums: Record<string, never>;
-  CompositeTypes: Record<string, never>; 
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
-  
 }
