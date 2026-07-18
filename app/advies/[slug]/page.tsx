@@ -61,7 +61,7 @@ export default async function ArtikelPage({ params }: PageProps) {
           <p className="text-brand-muted font-body text-base mb-10 leading-relaxed">{artikel.samenvatting}</p>
 
           <div className="space-y-5 text-brand-ivory/90 font-body text-[15px] leading-relaxed">
-            {paragrafen.map((p, i) => (
+            {paragrafen.map((p: string, i: number) => (
               <p key={i}>{p.trim()}</p>
             ))}
           </div>
