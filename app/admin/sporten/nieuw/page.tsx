@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { FormVeld } from "@/components/admin/FormVeld";
 
+const VOORBEELD_ICONEN = ["🏅", "🎾", "👟", "🏋️", "🏐", "⛳", "🏓", "🤺", "⚽", "🏀", "🚴", "🏊", "🥊", "🧗", "⛷️", "🏂"];
+
 export default function NieuweSportPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -13,12 +15,12 @@ export default function NieuweSportPage() {
   const [slug,          setSlug]          = useState("");
   const [beschrijving,  setBeschrijving]  = useState("");
   const [binnenBuiten,  setBinnenBuiten]  = useState("beide");
+  const [icoon,         setIcoon]         = useState("🏅");
   const [volgorde,      setVolgorde]      = useState("0");
   const [actief,        setActief]        = useState(true);
   const [opslaan,       setOpslaan]       = useState(false);
   const [fout,          setFout]          = useState<string | null>(null);
 
-  // Automatisch slug genereren vanuit naam
   function handleNaamChange(waarde: string) {
     setNaam(waarde);
     setSlug(waarde.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""));
@@ -31,6 +33,7 @@ export default function NieuweSportPage() {
     const { error } = await supabase.from("sports").insert({
       naam, slug, beschrijving: beschrijving || null,
       binnen_buiten: binnenBuiten as "binnen" | "buiten" | "beide",
+      icoon,
       volgorde: parseInt(volgorde), actief,
     });
 
@@ -48,6 +51,39 @@ export default function NieuweSportPage() {
       <div className="card-surface rounded-2xl p-8 space-y-5">
         <FormVeld label="Naam" naam="naam" verplicht waarde={naam} onChange={(v) => handleNaamChange(v as string)} placeholder="bijv. Padel" />
         <FormVeld label="Slug (URL)" naam="slug" verplicht waarde={slug} onChange={(v) => setSlug(v as string)} placeholder="padel" hulptekst="Wordt automatisch gegenereerd vanuit de naam" />
+
+        {/* Icoon kiezer */}
+        <div>
+          <label className="block text-brand-muted text-xs font-mono uppercase tracking-widest mb-2">Icoon</label>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 rounded-xl bg-brand-surface border border-brand-border flex items-center justify-center text-2xl">
+              {icoon}
+            </div>
+            <input
+              type="text"
+              value={icoon}
+              onChange={(e) => setIcoon(e.target.value)}
+              maxLength={4}
+              className="w-24 bg-brand-surface border border-brand-border rounded-xl px-3 py-2 text-brand-ivory text-lg text-center focus:outline-none focus:border-brand-gold transition-colors"
+            />
+            <span className="text-brand-muted text-xs font-body">Plak een emoji, of kies hieronder</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {VOORBEELD_ICONEN.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => setIcoon(e)}
+                className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg border transition-all ${
+                  icoon === e ? "border-brand-gold bg-brand-gold/10" : "border-brand-border hover:border-brand-gold/40"
+                }`}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <FormVeld label="Beschrijving" naam="beschrijving" type="textarea" waarde={beschrijving} onChange={(v) => setBeschrijving(v as string)} />
         <FormVeld label="Binnen/Buiten" naam="binnenBuiten" type="select" waarde={binnenBuiten} onChange={(v) => setBinnenBuiten(v as string)}
           opties={[{ label: "Beide", waarde: "beide" }, { label: "Binnen", waarde: "binnen" }, { label: "Buiten", waarde: "buiten" }]} />

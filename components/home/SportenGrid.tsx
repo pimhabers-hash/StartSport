@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
-const SPORT_EMOJI: Record<string, string> = {
-  padel: "🎾", tennis: "🎾", hardlopen: "👟",
-  fitness: "🏋️", volleybal: "🏐", golf: "⛳",
-  pickleball: "🏓", schermen: "🤺",
-};
-
 export async function SportenGrid() {
   const supabase = await createClient();
   const { data: sporten } = await supabase
     .from("sports")
-    .select("id, naam, slug, beschrijving")
+    .select("id, naam, slug, beschrijving, icoon")
     .eq("actief", true)
     .order("volgorde");
 
@@ -37,7 +31,7 @@ export async function SportenGrid() {
             className="group card-surface rounded-2xl p-6 flex flex-col gap-4 hover:border-brand-gold/40 hover:bg-brand-card/80 transition-all duration-300"
           >
             <div className="w-12 h-12 rounded-xl bg-brand-surface flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
-              {SPORT_EMOJI[sport.slug] ?? "🏅"}
+              {sport.icoon ?? "🏅"}
             </div>
             <div>
               <h3 className="font-display font-semibold text-brand-ivory text-lg leading-tight group-hover:text-gold-gradient transition-colors">

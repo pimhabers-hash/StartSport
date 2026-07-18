@@ -14,7 +14,7 @@ export default async function ConfiguratorPage({ searchParams }: PageProps) {
 
   const { data: sporten } = await supabase
     .from("sports")
-    .select("id, naam, slug")
+    .select("id, naam, slug, icoon")
     .eq("actief", true)
     .order("volgorde");
 

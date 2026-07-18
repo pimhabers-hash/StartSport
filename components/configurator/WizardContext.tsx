@@ -18,6 +18,7 @@ export interface WizardSport {
   id: string;
   naam: string;
   slug: string;
+  icoon?: string;
 }
 
 export type LeeftijdCategorie = "junior" | "volwassene" | "senior";

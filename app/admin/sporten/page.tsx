@@ -7,7 +7,7 @@ export default async function SportenPage() {
   const supabase = await createClient();
   const { data: sporten } = await supabase
     .from("sports")
-    .select("id, naam, slug, actief, volgorde")
+    .select("id, naam, slug, actief, volgorde, icoon")
     .order("volgorde");
 
   return (
@@ -34,7 +34,9 @@ export default async function SportenPage() {
           <tbody>
             {(sporten ?? []).map((sport) => (
               <tr key={sport.id} className="border-b border-brand-border/50 hover:bg-brand-surface/50 transition-colors">
-                <td className="px-5 py-4 text-brand-ivory font-body">{sport.naam}</td>
+                <td className="px-5 py-4 text-brand-ivory font-body">
+                  <span className="mr-2">{sport.icoon ?? "🏅"}</span>{sport.naam}
+                </td>
                 <td className="px-5 py-4 text-brand-muted font-mono text-xs">{sport.slug}</td>
                 <td className="px-5 py-4 text-brand-muted font-mono text-xs">{sport.volgorde}</td>
                 <td className="px-5 py-4">
