@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/admin/producten",  label: "Producten",   icoon: "📦" },
   { href: "/admin/categorieen",label: "Categorieën", icoon: "🏷️" },
   { href: "/admin/providers",  label: "Aanbieders",  icoon: "🏪" },
+  { href: "/admin/artikelen",  label: "Artikelen",   icoon: "📝" },
 ];
 
 export default async function AdminLayout({

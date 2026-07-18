@@ -17,7 +17,8 @@ export function Footer() {
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-brand-muted font-body">
             <Link href="/sporten" className="hover:text-brand-ivory transition-colors">Sporten</Link>
             <Link href="/configurator" className="hover:text-brand-ivory transition-colors">Configurator</Link>
-            <Link href="/admin" className="hover:text-brand-ivory transition-colors">Admin</Link>
+            <Link href="/advies" className="hover:text-brand-ivory transition-colors">Koopgidsen</Link>
+            <Link href="/over-ons" className="hover:text-brand-ivory transition-colors">Over ons</Link>
           </nav>
         </div>
 
