@@ -12,8 +12,13 @@ export default function ContactPage() {
 
   function handleVerzenden(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: koppel aan een echte verzendservice (bijv. Resend) in een latere fase.
-    // Voor nu tonen we een bevestiging zonder daadwerkelijke verzending.
+    // Opent de mail-client van de gebruiker met vooraf ingevulde gegevens.
+    // Dit is een bewuste tussenoplossing: er is nog geen backend e-mailservice
+    // gekoppeld (zoals Resend), dus we garanderen geen "stille" verzending
+    // die niet echt aankomt.
+    const onderwerp = encodeURIComponent(`Contact via StartSport — ${naam}`);
+    const body = encodeURIComponent(`${bericht}\n\n—\n${naam}\n${email}`);
+    window.location.href = `mailto:info@startsport.nl?subject=${onderwerp}&body=${body}`;
     setVerzonden(true);
   }
 
@@ -31,8 +36,8 @@ export default function ContactPage() {
           {verzonden ? (
             <div className="card-surface rounded-2xl p-8 text-center">
               <p className="text-3xl mb-3">✓</p>
-              <p className="text-brand-ivory font-display text-lg mb-1">Bericht verzonden</p>
-              <p className="text-brand-muted text-sm">We nemen zo snel mogelijk contact met je op.</p>
+              <p className="text-brand-ivory font-display text-lg mb-1">Bijna klaar</p>
+              <p className="text-brand-muted text-sm">Je e-mailprogramma opent zo met je bericht al ingevuld — verstuur 'm van daaruit.</p>
             </div>
           ) : (
             <form onSubmit={handleVerzenden} className="card-surface rounded-2xl p-8 space-y-5">
