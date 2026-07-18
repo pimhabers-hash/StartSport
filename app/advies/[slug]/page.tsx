@@ -41,7 +41,7 @@ export default async function ArtikelPage({ params }: PageProps) {
   const sport = Array.isArray(artikel.sports) ? artikel.sports[0] : artikel.sports as { naam: string; slug: string } | null;
 
   // Platte tekst met witregels tussen paragrafen omzetten naar <p>-elementen
-  const paragrafen = artikel.inhoud.split(/\n\s*\n/).filter((p) => p.trim());
+  const paragrafen = artikel.inhoud.split(/\n\s*\n/).filter((p: string) => p.trim());
 
   return (
     <>
