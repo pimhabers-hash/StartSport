@@ -21,7 +21,7 @@ const STAPPEN = [
 
 export function HoeHetWerkt() {
   return (
-    <section className="py-24 px-6 lg:px-12 border-t border-brand-border">
+    <section id="hoe-het-werkt" className="py-24 px-6 lg:px-12 border-t border-brand-border">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}

@@ -11,11 +11,17 @@ export function Navbar() {
 
         {/* Nav links */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-body text-brand-muted">
-          <Link href="#sporten" className="hover:text-brand-ivory transition-colors">
+          <Link href="/#sporten" className="hover:text-brand-ivory transition-colors">
             Sporten
           </Link>
-          <Link href="#hoe-het-werkt" className="hover:text-brand-ivory transition-colors">
+          <Link href="/advies" className="hover:text-brand-ivory transition-colors">
+            Koopgidsen
+          </Link>
+          <Link href="/#hoe-het-werkt" className="hover:text-brand-ivory transition-colors">
             Hoe het werkt
+          </Link>
+          <Link href="/over-ons" className="hover:text-brand-ivory transition-colors">
+            Over ons
           </Link>
         </nav>
 
