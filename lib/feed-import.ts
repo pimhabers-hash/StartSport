@@ -1,16 +1,13 @@
 import * as XLSX from "xlsx";
 
-// ─── Kolom-aliassen: herkent zowel onze eigen kolomnamen als die van
-// Awin/Daisycon-feeds (CSV of Excel), zodat een ruwe partnerfeed direct
-// bruikbaar is zonder handmatige bewerking vooraf.
 const ALIASSEN: Record<string, string[]> = {
-  naam:           ["naam", "product_name", "productnaam", "title"],
-  merk:           ["merk", "brand_name", "brand"],
-  prijs:          ["prijs", "search_price", "display_price", "store_price", "price"],
-  affiliate_url:  ["affiliate_url", "aw_deep_link", "merchant_deep_link", "deeplink", "url"],
-  afbeelding_url: ["afbeelding_url", "merchant_image_url", "aw_image_url", "large_image", "afbeelding"],
-  ean:            ["ean", "product_gtin", "gtin"],
-  categorie_ruw:  ["categorie", "merchant_category", "category_name", "merchant_product_category_path"],
+  naam:           ["naam", "productnaam", "title", "productname"],
+  merk:           ["merk", "brandname", "brand"],
+  prijs:          ["prijs", "searchprice", "displayprice", "storeprice", "price", "baseprice"],
+  affiliate_url:  ["affiliateurl", "awdeeplink", "merchantdeeplink", "deeplink", "url", "basketlink"],
+  afbeelding_url: ["afbeeldingurl", "merchantimageurl", "awimageurl", "largeimage", "afbeelding", "merchantthumburl"],
+  ean:            ["ean", "productgtin", "gtin"],
+  categorie_ruw:  ["categorie", "merchantcategory", "categoryname", "merchantproductcategorypath"],
 };
 
 export interface RuweFeedRij {
@@ -23,28 +20,42 @@ export interface RuweFeedRij {
   categorie_ruw: string;
 }
 
-function vindKolom(headers: string[], veld: string): number {
-  const mogelijkeNamen = ALIASSEN[veld] ?? [veld];
-  for (const naam of mogelijkeNamen) {
-    const idx = headers.findIndex((h) => String(h).toLowerCase().trim() === naam.toLowerCase());
-    if (idx !== -1) return idx;
-  }
-  return -1;
+export interface KolomHerkenning {
+  veld: string;
+  gevondenHeader: string | null;
 }
 
-function rijenUitTabel(rows: unknown[][]): RuweFeedRij[] {
-  if (rows.length < 2) return [];
+// Normaliseert een kolomnaam voor vergelijking: alles lowercase,
+// spaties/underscores/streepjes weg. Zo matcht "Product Name",
+// "product_name" en "productname" allemaal op elkaar.
+function normaliseer(tekst: string): string {
+  return String(tekst).toLowerCase().replace(/[\s_-]/g, "");
+}
+
+function vindKolom(headers: string[], veld: string): { index: number; header: string | null } {
+  const mogelijkeNamen = ALIASSEN[veld] ?? [veld];
+  const genormaliseerdeHeaders = headers.map(normaliseer);
+
+  for (const naam of mogelijkeNamen) {
+    const idx = genormaliseerdeHeaders.indexOf(normaliseer(naam));
+    if (idx !== -1) return { index: idx, header: headers[idx] };
+  }
+  return { index: -1, header: null };
+}
+
+function rijenUitTabel(rows: unknown[][]): { rijen: RuweFeedRij[]; herkenning: KolomHerkenning[]; ruweHeaders: string[] } {
+  if (rows.length < 2) return { rijen: [], herkenning: [], ruweHeaders: [] };
   const headers = rows[0].map((h) => String(h ?? ""));
 
-  const kolomIndex = {
-    naam: vindKolom(headers, "naam"),
-    merk: vindKolom(headers, "merk"),
-    prijs: vindKolom(headers, "prijs"),
-    affiliate_url: vindKolom(headers, "affiliate_url"),
-    afbeelding_url: vindKolom(headers, "afbeelding_url"),
-    ean: vindKolom(headers, "ean"),
-    categorie_ruw: vindKolom(headers, "categorie_ruw"),
-  };
+  const velden = ["naam", "merk", "prijs", "affiliate_url", "afbeelding_url", "ean", "categorie_ruw"];
+  const kolomIndex: Record<string, number> = {};
+  const herkenning: KolomHerkenning[] = [];
+
+  velden.forEach((veld) => {
+    const { index, header } = vindKolom(headers, veld);
+    kolomIndex[veld] = index;
+    herkenning.push({ veld, gevondenHeader: header });
+  });
 
   const resultaat: RuweFeedRij[] = [];
   for (let i = 1; i < rows.length; i++) {
@@ -61,15 +72,20 @@ function rijenUitTabel(rows: unknown[][]): RuweFeedRij[] {
       categorie_ruw: lees(kolomIndex.categorie_ruw),
     });
   }
-  return resultaat;
+  return { rijen: resultaat, herkenning, ruweHeaders: headers };
+}
+
+export interface ParseFeedResultaat {
+  rijen: RuweFeedRij[];
+  herkenning: KolomHerkenning[];
+  ruweHeaders: string[];
 }
 
 /**
- * Verwerkt een feed-bestand (CSV of Excel) tot een uniforme rijenlijst.
- * Werkt zowel in de browser (File → ArrayBuffer) als server-side
- * (fetch response → ArrayBuffer), omdat SheetJS in beide omgevingen werkt.
+ * Verwerkt een feed-bestand (CSV of Excel) tot een uniforme rijenlijst,
+ * plus diagnose-informatie over welke kolommen wel/niet herkend zijn.
  */
-export function parseFeedBuffer(buffer: ArrayBuffer, bestandsnaam: string): RuweFeedRij[] {
+export function parseFeedBuffer(buffer: ArrayBuffer, bestandsnaam: string): ParseFeedResultaat {
   const isExcel = /\.xlsx?$/i.test(bestandsnaam);
 
   if (isExcel) {
@@ -79,8 +95,6 @@ export function parseFeedBuffer(buffer: ArrayBuffer, bestandsnaam: string): Ruwe
     return rijenUitTabel(rows);
   }
 
-  // CSV: SheetJS kan ook platte tekst parsen, robuuster dan handmatig splitsen
-  // (handelt quotes en verschillende regeleindes correct af).
   const tekst = new TextDecoder("utf-8").decode(buffer);
   const workbook = XLSX.read(tekst, { type: "string" });
   const eersteSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -98,10 +112,6 @@ export function bepaalBudgetklasse(
   return "premium";
 }
 
-/**
- * Probeert een ruwe categorietekst uit een feed automatisch te koppelen
- * aan een van onze eigen categorieën, op basis van sleutelwoord-match.
- */
 export function matchCategorie(
   ruweTekst: string,
   categorieen: { id: string; naam: string; slug: string }[]

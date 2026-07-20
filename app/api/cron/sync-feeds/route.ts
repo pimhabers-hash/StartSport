@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
       const buffer = await response.arrayBuffer();
       const bestandsnaamHint = abo.feed_url.toLowerCase().includes(".xlsx") ? "feed.xlsx" : "feed.csv";
-      const ruweRijen = parseFeedBuffer(buffer, bestandsnaamHint);
+      const { rijen: ruweRijen } = parseFeedBuffer(buffer, bestandsnaamHint);
 
       const { data: bestaandeProducten } = await supabase
         .from("products")

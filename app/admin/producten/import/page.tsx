@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie, type RuweFeedRij } from "@/lib/feed-import";
+import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie, type RuweFeedRij, type KolomHerkenning } from "@/lib/feed-import";
 
 
 export default function ImportPage() {
@@ -20,6 +20,7 @@ export default function ImportPage() {
 
   const [bestandsnaam, setBestandsnaam] = useState<string | null>(null);
   const [ruweRijen, setRuweRijen] = useState<RuweFeedRij[]>([]);
+  const [herkenning, setHerkenning] = useState<KolomHerkenning[]>([]);
   const [categorieMapping, setCategorieMapping] = useState<Record<string, string>>({});
   const [analyseren, setAnalyseren] = useState(false);
   const [importeren, setImporteren] = useState(false);
@@ -52,12 +53,24 @@ export default function ImportPage() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const rijen = parseFeedBuffer(buffer, file.name);
+      const { rijen, herkenning: herk, ruweHeaders } = parseFeedBuffer(buffer, file.name);
+      setHerkenning(herk);
+
       if (rijen.length === 0) {
-        setFout("Geen geldige rijen gevonden. Check of de kolomkoppen herkenbaar zijn (naam, prijs, affiliate-link).");
+        setFout(`Geen rijen gevonden. Kolomkoppen in bestand: ${ruweHeaders.join(", ") || "(geen headers gevonden)"}`);
         setAnalyseren(false);
         return;
       }
+
+      const verplichteVelden = herk.filter((h) => ["naam", "prijs", "affiliate_url"].includes(h.veld));
+      const nietGevonden = verplichteVelden.filter((h) => !h.gevondenHeader);
+      if (nietGevonden.length > 0) {
+        setFout(
+          `Kon deze verplichte kolommen niet vinden: ${nietGevonden.map((h) => h.veld).join(", ")}. ` +
+          `Kolomkoppen in je bestand: ${ruweHeaders.join(", ")}`
+        );
+      }
+
       setRuweRijen(rijen);
 
       const nieuweMapping: Record<string, string> = {};
@@ -134,19 +147,21 @@ export default function ImportPage() {
     setImporteren(false);
   }
 
-  const previewRijen = ruweRijen.length > 0
-    ? ruweRijen.slice(0, 200).map((r) => {
-        const prijsGetal = parseFloat(r.prijs.replace(",", "."));
-        const budgetklasse = isNaN(prijsGetal) ? null : bepaalBudgetklasse(prijsGetal, parseFloat(grensBudget), parseFloat(grensMidden));
-        const heeftFout = !r.naam || !r.prijs || !r.affiliate_url || isNaN(prijsGetal);
-        const overgeslagen = !!(r.categorie_ruw && !categorieMapping[r.categorie_ruw]);
-        return { ...r, budgetklasse, heeftFout, overgeslagen };
-      })
-    : [];
+  // Belangrijk: bereken de status over ALLE rijen, niet alleen de rijen
+  // die in de preview-tabel zichtbaar zijn — anders kloppen de tellingen
+  // niet bij grote bestanden (zoals een feed met 40.000+ producten).
+  const alleRijenMetStatus = ruweRijen.map((r) => {
+    const prijsGetal = parseFloat(r.prijs.replace(",", "."));
+    const budgetklasse = isNaN(prijsGetal) ? null : bepaalBudgetklasse(prijsGetal, parseFloat(grensBudget), parseFloat(grensMidden));
+    const heeftFout = !r.naam || !r.prijs || !r.affiliate_url || isNaN(prijsGetal);
+    const overgeslagen = !!(r.categorie_ruw && !categorieMapping[r.categorie_ruw]) && !heeftFout;
+    return { ...r, budgetklasse, heeftFout, overgeslagen };
+  });
 
-  const aantalGeldig = previewRijen.filter((r) => !r.heeftFout && !r.overgeslagen).length;
-  const aantalOvergeslagen = previewRijen.filter((r) => r.overgeslagen).length;
-  const aantalFout = previewRijen.filter((r) => r.heeftFout).length;
+  const previewRijen = alleRijenMetStatus.slice(0, 200);
+  const aantalGeldig = alleRijenMetStatus.filter((r) => !r.heeftFout && !r.overgeslagen).length;
+  const aantalOvergeslagen = alleRijenMetStatus.filter((r) => r.overgeslagen).length;
+  const aantalFout = alleRijenMetStatus.filter((r) => r.heeftFout).length;
 
   return (
     <div className="max-w-5xl">
@@ -224,6 +239,22 @@ export default function ImportPage() {
 
           {analyseren && <p className="text-brand-muted text-sm font-mono animate-pulse mb-4">Bestand analyseren...</p>}
           {fout && <p className="text-red-400 text-sm font-mono mb-4">{fout}</p>}
+
+          {herkenning.length > 0 && (
+            <div className="card-surface rounded-2xl p-6 mb-6">
+              <p className="text-brand-gold text-xs font-mono uppercase tracking-widest mb-3">Kolomherkenning</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {herkenning.map((h) => (
+                  <div key={h.veld} className={`px-3 py-2 rounded-lg text-xs font-mono ${
+                    h.gevondenHeader ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"
+                  }`}>
+                    <p className="opacity-70">{h.veld}</p>
+                    <p className="truncate">{h.gevondenHeader ?? "niet gevonden"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {uniekeCategorieen.length > 0 && (
             <div className="card-surface rounded-2xl p-6 mb-6">

@@ -32,6 +32,12 @@ export default function FeedsPage() {
 
   useEffect(() => { laad(); }, []);
 
+  async function handleVerwijderen(id: string, naam: string) {
+    if (!confirm(`Weet je zeker dat je "${naam}" wilt verwijderen? De automatische synchronisatie stopt dan.`)) return;
+    await supabase.from("feed_subscriptions").delete().eq("id", id);
+    laad();
+  }
+
   async function handleHandmatigSyncen() {
     setSyncBezig(true);
     setSyncResultaat(null);
@@ -84,7 +90,7 @@ export default function FeedsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-brand-border">
-              {["Feed", "Sport", "Laatste sync", "Resultaat", "Status"].map((h) => (
+              {["Feed", "Sport", "Laatste sync", "Resultaat", "Status", ""].map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-brand-muted text-xs font-mono uppercase tracking-widest">{h}</th>
               ))}
             </tr>
@@ -103,11 +109,19 @@ export default function FeedsPage() {
                   <td className="px-5 py-4">
                     <span className={`w-2 h-2 rounded-full inline-block ${f.actief ? "bg-green-500" : "bg-red-500/50"}`} />
                   </td>
+                  <td className="px-5 py-4">
+                    <button
+                      onClick={() => handleVerwijderen(f.id, f.naam)}
+                      className="text-red-400 text-xs font-mono hover:text-red-300 transition-colors"
+                    >
+                      Verwijder
+                    </button>
+                  </td>
                 </tr>
               );
             })}
             {feeds.length === 0 && (
-              <tr><td colSpan={5} className="px-5 py-12 text-center text-brand-muted font-mono text-sm">
+              <tr><td colSpan={6} className="px-5 py-12 text-center text-brand-muted font-mono text-sm">
                 Nog geen feeds gekoppeld. <Link href="/admin/feeds/nieuw" className="text-brand-gold underline">Voeg er een toe →</Link>
               </td></tr>
             )}
