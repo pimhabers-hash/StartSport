@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/admin",            label: "Dashboard",   icoon: "📊" },
   { href: "/admin/sporten",    label: "Sporten",     icoon: "🏅" },
   { href: "/admin/producten",  label: "Producten",   icoon: "📦" },
+  { href: "/admin/feeds",      label: "Auto-feeds",  icoon: "🔄" },
   { href: "/admin/categorieen",label: "Categorieën", icoon: "🏷️" },
   { href: "/admin/providers",  label: "Aanbieders",  icoon: "🏪" },
   { href: "/admin/artikelen",  label: "Artikelen",   icoon: "📝" },

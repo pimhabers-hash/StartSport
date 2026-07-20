@@ -3,85 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie, type RuweFeedRij } from "@/lib/feed-import";
 
-const ALIASSEN: Record<string, string[]> = {
-  naam:           ["naam", "product_name", "productnaam", "title"],
-  merk:           ["merk", "brand_name", "brand"],
-  prijs:          ["prijs", "search_price", "display_price", "store_price", "price"],
-  affiliate_url:  ["affiliate_url", "aw_deep_link", "merchant_deep_link", "deeplink", "url"],
-  afbeelding_url: ["afbeelding_url", "merchant_image_url", "aw_image_url", "large_image", "afbeelding"],
-  ean:            ["ean", "product_gtin", "gtin"],
-  categorie_ruw:  ["categorie", "merchant_category", "category_name", "merchant_product_category_path"],
-};
-
-interface RuweRij {
-  naam: string;
-  merk: string;
-  prijs: string;
-  affiliate_url: string;
-  afbeelding_url: string;
-  ean: string;
-  categorie_ruw: string;
-}
-
-function vindKolom(headers: string[], veld: string): number {
-  const mogelijkeNamen = ALIASSEN[veld] ?? [veld];
-  for (const naam of mogelijkeNamen) {
-    const idx = headers.findIndex((h) => h.toLowerCase().trim() === naam.toLowerCase());
-    if (idx !== -1) return idx;
-  }
-  return -1;
-}
-
-function parseCsvRegel(regel: string): string[] {
-  const waarden: string[] = [];
-  let huidig = "";
-  let inQuotes = false;
-  for (const char of regel) {
-    if (char === '"') inQuotes = !inQuotes;
-    else if (char === "," && !inQuotes) { waarden.push(huidig.trim()); huidig = ""; }
-    else huidig += char;
-  }
-  waarden.push(huidig.trim());
-  return waarden;
-}
-
-function parseCsv(tekst: string): RuweRij[] {
-  const regels = tekst.trim().split("\n").filter((r) => r.trim());
-  if (regels.length < 2) return [];
-
-  const headers = parseCsvRegel(regels[0]);
-  const kolomIndex = {
-    naam: vindKolom(headers, "naam"),
-    merk: vindKolom(headers, "merk"),
-    prijs: vindKolom(headers, "prijs"),
-    affiliate_url: vindKolom(headers, "affiliate_url"),
-    afbeelding_url: vindKolom(headers, "afbeelding_url"),
-    ean: vindKolom(headers, "ean"),
-    categorie_ruw: vindKolom(headers, "categorie_ruw"),
-  };
-
-  const rijen: RuweRij[] = [];
-  for (let i = 1; i < regels.length; i++) {
-    const waarden = parseCsvRegel(regels[i]);
-    rijen.push({
-      naam: kolomIndex.naam >= 0 ? waarden[kolomIndex.naam] ?? "" : "",
-      merk: kolomIndex.merk >= 0 ? waarden[kolomIndex.merk] ?? "" : "",
-      prijs: kolomIndex.prijs >= 0 ? waarden[kolomIndex.prijs] ?? "" : "",
-      affiliate_url: kolomIndex.affiliate_url >= 0 ? waarden[kolomIndex.affiliate_url] ?? "" : "",
-      afbeelding_url: kolomIndex.afbeelding_url >= 0 ? waarden[kolomIndex.afbeelding_url] ?? "" : "",
-      ean: kolomIndex.ean >= 0 ? waarden[kolomIndex.ean] ?? "" : "",
-      categorie_ruw: kolomIndex.categorie_ruw >= 0 ? waarden[kolomIndex.categorie_ruw] ?? "" : "",
-    });
-  }
-  return rijen;
-}
-
-function bepaalBudgetklasse(prijs: number, grensBudget: number, grensMidden: number): "budget" | "middenklasse" | "premium" {
-  if (prijs < grensBudget) return "budget";
-  if (prijs < grensMidden) return "middenklasse";
-  return "premium";
-}
 
 export default function ImportPage() {
   const supabase = createClient();
@@ -96,7 +19,7 @@ export default function ImportPage() {
   const [grensMidden, setGrensMidden] = useState("150");
 
   const [bestandsnaam, setBestandsnaam] = useState<string | null>(null);
-  const [ruweRijen, setRuweRijen] = useState<RuweRij[]>([]);
+  const [ruweRijen, setRuweRijen] = useState<RuweFeedRij[]>([]);
   const [categorieMapping, setCategorieMapping] = useState<Record<string, string>>({});
   const [analyseren, setAnalyseren] = useState(false);
   const [importeren, setImporteren] = useState(false);
@@ -128,10 +51,10 @@ export default function ImportPage() {
     setKlaar(null);
 
     try {
-      const tekst = await file.text();
-      const rijen = parseCsv(tekst);
+      const buffer = await file.arrayBuffer();
+      const rijen = parseFeedBuffer(buffer, file.name);
       if (rijen.length === 0) {
-        setFout("Geen geldige rijen gevonden. Check of het bestand een CSV is met komma's als scheidingsteken.");
+        setFout("Geen geldige rijen gevonden. Check of de kolomkoppen herkenbaar zijn (naam, prijs, affiliate-link).");
         setAnalyseren(false);
         return;
       }
@@ -140,15 +63,12 @@ export default function ImportPage() {
       const nieuweMapping: Record<string, string> = {};
       const uniek = Array.from(new Set(rijen.map((r) => r.categorie_ruw).filter(Boolean)));
       uniek.forEach((ruw) => {
-        const laag = ruw.toLowerCase();
-        const gevonden = categorieen.find((c) =>
-          laag.includes(c.slug) || laag.includes(c.naam.toLowerCase())
-        );
-        if (gevonden) nieuweMapping[ruw] = gevonden.id;
+        const match = matchCategorie(ruw, categorieen);
+        if (match) nieuweMapping[ruw] = match;
       });
       setCategorieMapping(nieuweMapping);
-    } catch {
-      setFout("Kon het bestand niet lezen.");
+    } catch (err) {
+      setFout(`Kon het bestand niet lezen: ${err instanceof Error ? err.message : "onbekende fout"}`);
     } finally {
       setAnalyseren(false);
     }
@@ -295,9 +215,9 @@ export default function ImportPage() {
             <label className="block">
               <div className="border-2 border-dashed border-brand-border rounded-xl p-12 text-center cursor-pointer hover:border-brand-gold/40 transition-colors">
                 <p className="text-3xl mb-3">📄</p>
-                <p className="text-brand-ivory font-body mb-1">{bestandsnaam ?? "Klik om je Awin/Daisycon CSV-export te kiezen"}</p>
+                <p className="text-brand-ivory font-body mb-1">{bestandsnaam ?? "Klik om je Awin/Daisycon export te kiezen (CSV of Excel)"}</p>
                 <p className="text-brand-muted text-xs font-mono">Awin- en eigen kolomnamen worden automatisch herkend</p>
-                <input type="file" accept=".csv" onChange={handleBestandGekozen} className="hidden" />
+                <input type="file" accept=".csv,.xlsx,.xls" onChange={handleBestandGekozen} className="hidden" />
               </div>
             </label>
           </div>
