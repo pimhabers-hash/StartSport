@@ -40,6 +40,7 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
       const eanMap = new Map((bestaandeProducten ?? []).filter((p) => p.ean).map((p) => [p.ean, p.id]));
 
       let succes = 0, mislukt = 0, overgeslagen = 0;
+      const voorbeeldenOvergeslagenCategorieen = new Set<string>();
 
       for (const rij of ruweRijen) {
         if (!rij.naam || !rij.prijs || !rij.affiliate_url) { mislukt++; continue; }
@@ -49,7 +50,13 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
         const category_id = rij.categorie_ruw
           ? matchCategorie(rij.categorie_ruw, categorieen ?? [])
           : null;
-        if (rij.categorie_ruw && !category_id) { overgeslagen++; continue; }
+        if (rij.categorie_ruw && !category_id) {
+          overgeslagen++;
+          if (voorbeeldenOvergeslagenCategorieen.size < 8) {
+            voorbeeldenOvergeslagenCategorieen.add(rij.categorie_ruw);
+          }
+          continue;
+        }
 
         const bestaand_id = (rij.ean && eanMap.get(rij.ean)) ?? naamMap.get(rij.naam.toLowerCase().trim());
         const budgetklasse = bepaalBudgetklasse(prijsGetal, Number(abo.grens_budget), Number(abo.grens_midden));
@@ -84,7 +91,9 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
         }
       }
 
-      const samenvatting = `${succes} verwerkt, ${overgeslagen} overgeslagen, ${mislukt} mislukt (${ruweRijen.length} totaal)`;
+      const voorbeelden = Array.from(voorbeeldenOvergeslagenCategorieen);
+      const samenvatting = `${succes} verwerkt, ${overgeslagen} overgeslagen, ${mislukt} mislukt (${ruweRijen.length} totaal)` +
+        (voorbeelden.length > 0 ? ` — voorbeelden overgeslagen categorieën: ${voorbeelden.map((v) => `"${v}"`).join(", ")}` : "");
       resultaten[abo.naam] = samenvatting;
 
       await supabase.from("feed_subscriptions").update({

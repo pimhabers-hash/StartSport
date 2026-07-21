@@ -114,7 +114,7 @@ export default function FeedsPage() {
                   <td className="px-5 py-4 text-brand-muted font-mono text-xs">
                     {f.laatste_sync ? new Date(f.laatste_sync).toLocaleString("nl-NL") : "Nog niet gesynchroniseerd"}
                   </td>
-                  <td className="px-5 py-4 text-brand-muted font-mono text-xs max-w-xs truncate">{f.laatste_resultaat ?? "—"}</td>
+                  <td className="px-5 py-4 text-brand-muted font-mono text-xs max-w-md break-words">{f.laatste_resultaat ?? "—"}</td>
                   <td className="px-5 py-4">
                     <span className={`w-2 h-2 rounded-full inline-block ${f.actief ? "bg-green-500" : "bg-red-500/50"}`} />
                   </td>
