@@ -171,13 +171,41 @@ export function bepaalBudgetklasse(
   return "premium";
 }
 
+// Meertalige trefwoorden per categorie-slug — nodig omdat affiliate-feeds
+// vaak Engelse of Spaanse categorienamen gebruiken (bijv. Padel Market
+// levert Spaanstalige productdata), terwijl onze eigen categorieën
+// Nederlandse namen hebben.
+const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
+  racket:       ["racket", "raquet", "raqueta", "pala", "palas", "paddle", "racquet"],
+  schoenen:     ["schoen", "shoe", "zapatilla", "calzado", "footwear"],
+  ballen:       ["bal", "ball", "bola", "pelota"],
+  tassen:       ["tas", "bag", "bolsa", "mochila", "backpack"],
+  kleding:      ["kleding", "cloth", "apparel", "ropa", "camiseta", "textil", "shirt", "short", "pantalon"],
+  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca"],
+  voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
+  bescherming:  ["bescherming", "protection", "proteccion", "guard"],
+};
+
 export function matchCategorie(
   ruweTekst: string,
   categorieen: { id: string; naam: string; slug: string }[]
 ): string | null {
   const laag = ruweTekst.toLowerCase();
-  const gevonden = categorieen.find(
+
+  // Poging 1: directe match op onze eigen categorienaam/slug (Nederlands)
+  const directeMatch = categorieen.find(
     (c) => laag.includes(c.slug) || laag.includes(c.naam.toLowerCase())
   );
-  return gevonden?.id ?? null;
+  if (directeMatch) return directeMatch.id;
+
+  // Poging 2: meertalige trefwoorden — vangt Engelse/Spaanse categorieën op
+  for (const categorie of categorieen) {
+    const trefwoorden = CATEGORIE_TREFWOORDEN[categorie.slug];
+    if (!trefwoorden) continue;
+    if (trefwoorden.some((woord) => laag.includes(woord))) {
+      return categorie.id;
+    }
+  }
+
+  return null;
 }

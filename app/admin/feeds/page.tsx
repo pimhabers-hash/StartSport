@@ -105,7 +105,11 @@ export default function FeedsPage() {
               const sportNaam = Array.isArray(f.sports) ? f.sports[0]?.naam : f.sports?.naam;
               return (
                 <tr key={f.id} className="border-b border-brand-border/50">
-                  <td className="px-5 py-4 text-brand-ivory font-body">{f.naam}</td>
+                  <td className="px-5 py-4 text-brand-ivory font-body">
+                    <Link href={`/admin/feeds/${f.id}`} className="hover:text-brand-gold transition-colors">
+                      {f.naam}
+                    </Link>
+                  </td>
                   <td className="px-5 py-4 text-brand-muted font-mono text-xs">{sportNaam ?? "—"}</td>
                   <td className="px-5 py-4 text-brand-muted font-mono text-xs">
                     {f.laatste_sync ? new Date(f.laatste_sync).toLocaleString("nl-NL") : "Nog niet gesynchroniseerd"}
