@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { syncAlleFeeds } from "@/lib/sync-feeds";
+
+export const maxDuration = 300;
 
 export async function POST() {
   // Check dat dit door een ingelogde admin wordt aangeroepen
@@ -12,12 +15,16 @@ export async function POST() {
     return NextResponse.json({ error: "Geen rechten" }, { status: 403 });
   }
 
-  // Roep de eigenlijke sync-logica aan via de cron-route, met het geheime token
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const response = await fetch(`${baseUrl}/api/cron/sync-feeds`, {
-    headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-  });
-
-  const data = await response.json();
-  return NextResponse.json(data, { status: response.status });
+  // Direct de gedeelde synchronisatie-functie aanroepen — geen interne
+  // HTTP-aanroep meer nodig (die faalde eerder omdat de basis-URL op
+  // Vercel niet klopte).
+  try {
+    const resultaat = await syncAlleFeeds();
+    return NextResponse.json({ ok: true, ...resultaat });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Onbekende fout" },
+      { status: 500 }
+    );
+  }
 }

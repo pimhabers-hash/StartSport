@@ -44,10 +44,15 @@ export default function FeedsPage() {
     try {
       const res = await fetch("/api/admin/sync-feeds-nu", { method: "POST" });
       const data = await res.json();
-      setSyncResultaat(res.ok ? "Synchronisatie voltooid — zie resultaten hieronder." : `Fout: ${data.error}`);
+      if (!res.ok) {
+        setSyncResultaat(`Fout: ${data.error ?? "onbekende fout"}`);
+      } else {
+        const regels = Object.entries(data.resultaten ?? {}).map(([naam, r]) => `${naam}: ${r}`);
+        setSyncResultaat(regels.length > 0 ? regels.join(" · ") : "Geen actieve feeds om te synchroniseren.");
+      }
       await laad();
-    } catch {
-      setSyncResultaat("Er ging iets mis bij het starten van de synchronisatie.");
+    } catch (err) {
+      setSyncResultaat(`Er ging iets mis: ${err instanceof Error ? err.message : "onbekende fout"}`);
     } finally {
       setSyncBezig(false);
     }
