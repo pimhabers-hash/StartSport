@@ -67,7 +67,8 @@ export default function ImportPage() {
       if (nietGevonden.length > 0) {
         setFout(
           `Kon deze verplichte kolommen niet vinden: ${nietGevonden.map((h) => h.veld).join(", ")}. ` +
-          `Kolomkoppen in je bestand: ${ruweHeaders.join(", ")}`
+          `Ruwe kolomkoppen (tussen aanhalingstekens, zodat onzichtbare tekens zichtbaar worden): ` +
+          ruweHeaders.map((h) => JSON.stringify(h)).join(", ")
         );
       }
 

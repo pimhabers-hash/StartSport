@@ -26,20 +26,35 @@ export interface KolomHerkenning {
 }
 
 // Normaliseert een kolomnaam voor vergelijking: alles lowercase,
-// spaties/underscores/streepjes weg. Zo matcht "Product Name",
-// "product_name" en "productname" allemaal op elkaar.
+// spaties/underscores/streepjes weg, en onzichtbare tekens (zoals een
+// BOM die Excel soms toevoegt bij het opslaan als CSV/UTF-8) verwijderd.
 function normaliseer(tekst: string): string {
-  return String(tekst).toLowerCase().replace(/[\s_-]/g, "");
+  return String(tekst)
+    .replace(/^\uFEFF/, "")           // BOM aan het begin van de tekst
+    .replace(/[\u200B-\u200F\uFEFF]/g, "") // overige onzichtbare tekens
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, "");
 }
 
 function vindKolom(headers: string[], veld: string): { index: number; header: string | null } {
   const mogelijkeNamen = ALIASSEN[veld] ?? [veld];
   const genormaliseerdeHeaders = headers.map(normaliseer);
 
+  // Poging 1: exacte match na normalisatie
   for (const naam of mogelijkeNamen) {
     const idx = genormaliseerdeHeaders.indexOf(normaliseer(naam));
     if (idx !== -1) return { index: idx, header: headers[idx] };
   }
+
+  // Poging 2 (vangnet): gedeeltelijke match — vangt varianten op zoals
+  // "aw product name" of kolommen met een extra prefix/suffix.
+  for (const naam of mogelijkeNamen) {
+    const genorm = normaliseer(naam);
+    const idx = genormaliseerdeHeaders.findIndex((h) => h.includes(genorm) || genorm.includes(h));
+    if (idx !== -1) return { index: idx, header: headers[idx] };
+  }
+
   return { index: -1, header: null };
 }
 
