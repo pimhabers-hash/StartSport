@@ -188,22 +188,29 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
 
 export function matchCategorie(
   ruweTekst: string,
-  categorieen: { id: string; naam: string; slug: string }[]
+  categorieen: { id: string; naam: string; slug: string }[],
+  productNaam: string = ""
 ): string | null {
-  const laag = ruweTekst.toLowerCase();
+  // Probeer eerst de ruwe categorietekst, en als die niks oplevert de
+  // productnaam zelf — sommige feeds vullen merchant_category namelijk
+  // met de sportnaam in plaats van het producttype (bijv. "Tennis" voor
+  // een padelracket), waardoor de productnaam betrouwbaarder is.
+  const kandidaten = [ruweTekst, productNaam].filter(Boolean);
 
-  // Poging 1: directe match op onze eigen categorienaam/slug (Nederlands)
-  const directeMatch = categorieen.find(
-    (c) => laag.includes(c.slug) || laag.includes(c.naam.toLowerCase())
-  );
-  if (directeMatch) return directeMatch.id;
+  for (const tekst of kandidaten) {
+    const laag = tekst.toLowerCase();
 
-  // Poging 2: meertalige trefwoorden — vangt Engelse/Spaanse categorieën op
-  for (const categorie of categorieen) {
-    const trefwoorden = CATEGORIE_TREFWOORDEN[categorie.slug];
-    if (!trefwoorden) continue;
-    if (trefwoorden.some((woord) => laag.includes(woord))) {
-      return categorie.id;
+    const directeMatch = categorieen.find(
+      (c) => laag.includes(c.slug) || laag.includes(c.naam.toLowerCase())
+    );
+    if (directeMatch) return directeMatch.id;
+
+    for (const categorie of categorieen) {
+      const trefwoorden = CATEGORIE_TREFWOORDEN[categorie.slug];
+      if (!trefwoorden) continue;
+      if (trefwoorden.some((woord) => laag.includes(woord))) {
+        return categorie.id;
+      }
     }
   }
 

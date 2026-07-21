@@ -47,13 +47,13 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
         const prijsGetal = parseFloat(rij.prijs.replace(",", "."));
         if (isNaN(prijsGetal)) { mislukt++; continue; }
 
-        const category_id = rij.categorie_ruw
-          ? matchCategorie(rij.categorie_ruw, categorieen ?? [])
+        const category_id = rij.categorie_ruw || rij.naam
+          ? matchCategorie(rij.categorie_ruw, categorieen ?? [], rij.naam)
           : null;
-        if (rij.categorie_ruw && !category_id) {
+        if (!category_id) {
           overgeslagen++;
           if (voorbeeldenOvergeslagenCategorieen.size < 8) {
-            voorbeeldenOvergeslagenCategorieen.add(rij.categorie_ruw);
+            voorbeeldenOvergeslagenCategorieen.add(rij.categorie_ruw || rij.naam);
           }
           continue;
         }
