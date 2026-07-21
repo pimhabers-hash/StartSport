@@ -54,7 +54,7 @@ export default function ImportPage() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const { rijen, herkenning: herk, ruweHeaders, scheidingsteken: gedetecteerd } = parseFeedBuffer(buffer, file.name);
+      const { rijen, herkenning: herk, ruweHeaders, scheidingsteken: gedetecteerd } = await parseFeedBuffer(buffer, file.name);
       setHerkenning(herk);
       setScheidingsteken(gedetecteerd ?? null);
 

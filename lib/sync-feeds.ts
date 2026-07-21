@@ -31,7 +31,7 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
 
       const buffer = await response.arrayBuffer();
       const bestandsnaamHint = abo.feed_url.toLowerCase().includes(".xlsx") ? "feed.xlsx" : "feed.csv";
-      const { rijen: ruweRijen } = parseFeedBuffer(buffer, bestandsnaamHint);
+      const { rijen: ruweRijen } = await parseFeedBuffer(buffer, bestandsnaamHint);
 
       const { data: bestaandeProducten } = await supabase
         .from("products")

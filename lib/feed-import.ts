@@ -110,20 +110,50 @@ export interface ParseFeedResultaat {
 }
 
 /**
- * Verwerkt een feed-bestand (CSV of Excel) tot een uniforme rijenlijst,
- * plus diagnose-informatie over welke kolommen wel/niet herkend zijn.
+ * Pakt een gzip-gecomprimeerd bestand uit met de ingebouwde
+ * DecompressionStream API (beschikbaar in browsers en Node 18+),
+ * zodat we geen extra library nodig hebben.
  */
-export function parseFeedBuffer(buffer: ArrayBuffer, bestandsnaam: string): ParseFeedResultaat {
-  const isExcel = /\.xlsx?$/i.test(bestandsnaam);
+async function pakGzipUit(buffer: ArrayBuffer): Promise<ArrayBuffer> {
+  const stream = new Response(buffer).body!.pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).arrayBuffer();
+}
+
+function isGzip(bytes: Uint8Array): boolean {
+  return bytes[0] === 0x1f && bytes[1] === 0x8b;
+}
+
+function isZip(bytes: Uint8Array): boolean {
+  // ZIP-bestanden (waaronder .xlsx, want dat is intern een zip) beginnen met "PK"
+  return bytes[0] === 0x50 && bytes[1] === 0x4b;
+}
+
+/**
+ * Verwerkt een feed-bestand tot een uniforme rijenlijst. Het echte
+ * formaat wordt herkend aan de inhoud zelf (magic bytes), niet aan de
+ * bestandsnaam — belangrijk omdat automatisch gegenereerde feed-URL's
+ * vaak geen (juiste) bestandsextensie hebben, en soms gzip-gecomprimeerd
+ * worden aangeleverd zonder dat dat uit de naam blijkt.
+ */
+export async function parseFeedBuffer(buffer: ArrayBuffer, bestandsnaam: string): Promise<ParseFeedResultaat> {
+  let werkBuffer = buffer;
+  let bytes = new Uint8Array(werkBuffer.slice(0, 4));
+
+  if (isGzip(bytes)) {
+    werkBuffer = await pakGzipUit(werkBuffer);
+    bytes = new Uint8Array(werkBuffer.slice(0, 4));
+  }
+
+  const isExcel = isZip(bytes) || /\.xlsx?$/i.test(bestandsnaam);
 
   if (isExcel) {
-    const workbook = XLSX.read(buffer, { type: "array" });
+    const workbook = XLSX.read(werkBuffer, { type: "array" });
     const eersteSheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<unknown[]>(eersteSheet, { header: 1, raw: false });
     return rijenUitTabel(rows);
   }
 
-  const tekst = new TextDecoder("utf-8").decode(buffer);
+  const tekst = new TextDecoder("utf-8").decode(werkBuffer);
   const scheidingsteken = detecteerScheidingsteken(tekst);
   const workbook = XLSX.read(tekst, { type: "string", FS: scheidingsteken });
   const eersteSheet = workbook.Sheets[workbook.SheetNames[0]];
