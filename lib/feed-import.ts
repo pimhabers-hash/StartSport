@@ -25,7 +25,19 @@ export interface KolomHerkenning {
   gevondenHeader: string | null;
 }
 
-// Normaliseert een kolomnaam voor vergelijking: alles lowercase,
+// Detecteert automatisch of een CSV-bestand komma, puntkomma of tab als
+// scheidingsteken gebruikt — sommige exports (zoals "CSV voor Excel" met
+// Nederlandse regio-instellingen) gebruiken standaard een puntkomma.
+function detecteerScheidingsteken(tekst: string): string {
+  const eersteRegel = tekst.split(/\r?\n/)[0] ?? "";
+  const tellingen: Record<string, number> = {
+    ",": (eersteRegel.match(/,/g) ?? []).length,
+    ";": (eersteRegel.match(/;/g) ?? []).length,
+    "\t": (eersteRegel.match(/\t/g) ?? []).length,
+  };
+  const beste = Object.entries(tellingen).sort((a, b) => b[1] - a[1])[0];
+  return beste && beste[1] > 0 ? beste[0] : ",";
+}
 // spaties/underscores/streepjes weg, en onzichtbare tekens (zoals een
 // BOM die Excel soms toevoegt bij het opslaan als CSV/UTF-8) verwijderd.
 function normaliseer(tekst: string): string {
@@ -94,6 +106,7 @@ export interface ParseFeedResultaat {
   rijen: RuweFeedRij[];
   herkenning: KolomHerkenning[];
   ruweHeaders: string[];
+  scheidingsteken?: string;
 }
 
 /**
@@ -111,10 +124,11 @@ export function parseFeedBuffer(buffer: ArrayBuffer, bestandsnaam: string): Pars
   }
 
   const tekst = new TextDecoder("utf-8").decode(buffer);
-  const workbook = XLSX.read(tekst, { type: "string" });
+  const scheidingsteken = detecteerScheidingsteken(tekst);
+  const workbook = XLSX.read(tekst, { type: "string", FS: scheidingsteken });
   const eersteSheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<unknown[]>(eersteSheet, { header: 1, raw: false });
-  return rijenUitTabel(rows);
+  return { ...rijenUitTabel(rows), scheidingsteken: scheidingsteken === "\t" ? "tab" : scheidingsteken };
 }
 
 export function bepaalBudgetklasse(

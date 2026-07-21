@@ -21,6 +21,7 @@ export default function ImportPage() {
   const [bestandsnaam, setBestandsnaam] = useState<string | null>(null);
   const [ruweRijen, setRuweRijen] = useState<RuweFeedRij[]>([]);
   const [herkenning, setHerkenning] = useState<KolomHerkenning[]>([]);
+  const [scheidingsteken, setScheidingsteken] = useState<string | null>(null);
   const [categorieMapping, setCategorieMapping] = useState<Record<string, string>>({});
   const [analyseren, setAnalyseren] = useState(false);
   const [importeren, setImporteren] = useState(false);
@@ -53,8 +54,9 @@ export default function ImportPage() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const { rijen, herkenning: herk, ruweHeaders } = parseFeedBuffer(buffer, file.name);
+      const { rijen, herkenning: herk, ruweHeaders, scheidingsteken: gedetecteerd } = parseFeedBuffer(buffer, file.name);
       setHerkenning(herk);
+      setScheidingsteken(gedetecteerd ?? null);
 
       if (rijen.length === 0) {
         setFout(`Geen rijen gevonden. Kolomkoppen in bestand: ${ruweHeaders.join(", ") || "(geen headers gevonden)"}`);
@@ -243,7 +245,10 @@ export default function ImportPage() {
 
           {herkenning.length > 0 && (
             <div className="card-surface rounded-2xl p-6 mb-6">
-              <p className="text-brand-gold text-xs font-mono uppercase tracking-widest mb-3">Kolomherkenning</p>
+              <p className="text-brand-gold text-xs font-mono uppercase tracking-widest mb-1">Kolomherkenning</p>
+              {scheidingsteken && (
+                <p className="text-brand-muted text-xs font-mono mb-3">Herkend scheidingsteken: <span className="text-brand-ivory">{scheidingsteken}</span></p>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {herkenning.map((h) => (
                   <div key={h.veld} className={`px-3 py-2 rounded-lg text-xs font-mono ${
