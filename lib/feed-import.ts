@@ -171,6 +171,47 @@ export function bepaalBudgetklasse(
   return "premium";
 }
 
+// Meertalige trefwoorden om geslacht uit een productnaam te herkennen.
+// Woordgrenzen zijn belangrijk: "men" mag niet matchen binnen "women".
+const GESLACHT_TREFWOORDEN: { geslacht: "man" | "vrouw"; patroon: RegExp }[] = [
+  { geslacht: "vrouw", patroon: /\b(women|woman|dames|damen|mujer|femme|female|ladies)\b/i },
+  { geslacht: "man",   patroon: /\b(men|heren|herren|hombre|homme|male)\b/i },
+];
+
+/**
+ * Probeert het geslacht (man/vrouw/unisex) uit een productnaam te
+ * herkennen. Belangrijk: "vrouw" wordt eerst gecheckt, omdat "women"
+ * anders per ongeluk zou matchen op het "men"-patroon.
+ */
+export function detecteerGeslacht(naam: string): "man" | "vrouw" | "unisex" {
+  for (const { geslacht, patroon } of GESLACHT_TREFWOORDEN) {
+    if (patroon.test(naam)) return geslacht;
+  }
+  return "unisex";
+}
+
+/**
+ * Schat niveau en frequentie in op basis van de budgetklasse — een
+ * pragmatische vuistregel (geen wetenschap): budget-producten zijn
+ * doorgaans geschikter voor beginners die recreatief spelen, premium-
+ * producten voor gevorderde/competitieve, frequente spelers. Dit is een
+ * startpunt zodat producten niet blind "onclassified" blijven liggen;
+ * een admin kan dit altijd corrigeren via de bulk-classificatietool.
+ */
+export function schatNiveauEnFrequentie(budgetklasse: "budget" | "middenklasse" | "premium"): {
+  niveau: string[];
+  frequentie: string[];
+} {
+  switch (budgetklasse) {
+    case "budget":
+      return { niveau: ["beginner", "gemiddeld"], frequentie: ["recreatief", "wekelijks"] };
+    case "middenklasse":
+      return { niveau: ["gemiddeld", "gevorderd"], frequentie: ["wekelijks"] };
+    case "premium":
+      return { niveau: ["gevorderd", "competitie"], frequentie: ["wekelijks", "intensief"] };
+  }
+}
+
 // Meertalige trefwoorden per categorie-slug — nodig omdat affiliate-feeds
 // vaak Engelse of Spaanse categorienamen gebruiken (bijv. Padel Market
 // levert Spaanstalige productdata), terwijl onze eigen categorieën

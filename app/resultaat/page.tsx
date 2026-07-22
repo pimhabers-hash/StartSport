@@ -23,7 +23,7 @@ const LABEL: Record<string, string> = {
 
 export default async function ResultaatPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const { sport_id, sport_naam, niveau, budgetklasse, frequentie, binnen_buiten, doel } = params;
+  const { sport_id, sport_naam, niveau, budgetklasse, frequentie, binnen_buiten, doel, geslacht } = params;
 
   if (!sport_id || !niveau || !budgetklasse || !frequentie) {
     return (
@@ -42,7 +42,7 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
     .from("products")
     .select(`
       id, naam, merk, prijs, niveau, budgetklasse,
-      geschikt_voor_frequentie, affiliate_url, afbeelding_url, uitleg, score,
+      geschikt_voor_frequentie, affiliate_url, afbeelding_url, uitleg, score, geslacht,
       categories ( id, naam, slug ),
       providers ( naam, logo_url )
     `)
@@ -87,6 +87,7 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
     frequentie: frequentie as GebruikFrequentie,
     binnen_buiten: binnen_buiten as BinnenBuiten | undefined,
     doel: doel as Doel | undefined,
+    geslacht: geslacht as "man" | "vrouw" | "anders" | undefined,
   });
 
   const chips = [niveau, budgetklasse, frequentie, binnen_buiten, doel].filter(Boolean);

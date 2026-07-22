@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie } from "@/lib/feed-import";
+import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie, detecteerGeslacht, schatNiveauEnFrequentie } from "@/lib/feed-import";
 
 /**
  * Voert de synchronisatie van alle actieve feed-abonnementen uit.
@@ -84,8 +84,6 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
           nieuweNamenDitRun.add(genormaliseerdeNaam);
         }
 
-        const budgetklasse = bepaalBudgetklasse(prijsGetal, Number(abo.grens_budget), Number(abo.grens_midden));
-
         if (bestaand_id) {
           teUpdaten.push({
             id: bestaand_id,
@@ -94,6 +92,8 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
             afbeelding_url: rij.afbeelding_url || null,
           });
         } else {
+          const budgetklasse = bepaalBudgetklasse(prijsGetal, Number(abo.grens_budget), Number(abo.grens_midden));
+          const { niveau, frequentie } = schatNiveauEnFrequentie(budgetklasse);
           teInsertenen.push({
             naam: rij.naam,
             merk: rij.merk || null,
@@ -102,15 +102,19 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
             provider_id: abo.provider_id,
             prijs: prijsGetal,
             budgetklasse,
+            geslacht: detecteerGeslacht(rij.naam),
             affiliate_url: rij.affiliate_url,
             afbeelding_url: rij.afbeelding_url || null,
             ean: rij.ean || null,
-            niveau: [],
-            geschikt_voor_frequentie: [],
+            niveau,
+            geschikt_voor_frequentie: frequentie,
             score: 4.0,
             bron: "feed_sync",
+            // Producten gaan direct live met een prijs-gebaseerde inschatting
+            // van niveau/frequentie — 'geclassificeerd' geeft alleen aan of
+            // een admin dit nog heeft willen bevestigen/corrigeren.
             geclassificeerd: false,
-            actief: false,
+            actief: true,
           });
         }
       }

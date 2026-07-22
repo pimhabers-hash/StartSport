@@ -22,6 +22,7 @@ export interface ConfiguratorInput {
   frequentie: GebruikFrequentie;
   binnen_buiten?: BinnenBuiten;
   doel?: Doel;
+  geslacht?: "man" | "vrouw" | "anders";
 }
 
 export interface ProductMatcher {
@@ -37,6 +38,7 @@ export interface ProductMatcher {
   uitleg: string | null;
   score: number;
   binnen_buiten?: BinnenBuiten | null;
+  geslacht?: "man" | "vrouw" | "unisex" | null;
   category: { id: string; naam: string; slug: string };
   provider: { naam: string; logo_url: string | null } | null;
 }
@@ -60,6 +62,7 @@ const GEWICHT = {
   frequentie:    12,
   binnen_buiten:  8,
   doel:           5,
+  geslacht:       6,
   kwaliteit:     10, // score 0–5 → 0–10 punten
 };
 
@@ -125,7 +128,21 @@ function berekenMatchScore(
     }
   }
 
-  // 6. Productkwaliteit
+  // 6. Geslacht — unisex-producten passen altijd, dus die krijgen geen
+  // straf. Alleen bij een expliciete man/vrouw-match op beide kanten
+  // geven we een lichte boost; bij een duidelijke mismatch (product is
+  // "man", gebruiker koos "vrouw") juist geen punten voor dit onderdeel.
+  if (input.geslacht && input.geslacht !== "anders" && product.geslacht) {
+    if (product.geslacht === "unisex" || product.geslacht === input.geslacht) {
+      score += GEWICHT.geslacht;
+    }
+    // bij mismatch: gewoon 0 punten voor dit onderdeel, product blijft
+    // zichtbaar (nooit hard uitsluiten — data is een inschatting)
+  } else {
+    score += GEWICHT.geslacht / 2; // neutraal als er geen voorkeur/data is
+  }
+
+  // 7. Productkwaliteit
   score += (product.score ?? 0) * (GEWICHT.kwaliteit / 5);
 
   return score;

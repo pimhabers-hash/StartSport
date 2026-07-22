@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie, type RuweFeedRij, type KolomHerkenning } from "@/lib/feed-import";
+import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie, detecteerGeslacht, schatNiveauEnFrequentie, type RuweFeedRij, type KolomHerkenning } from "@/lib/feed-import";
 
 
 export default function ImportPage() {
@@ -80,6 +80,9 @@ export default function ImportPage() {
       const uniek = Array.from(new Set(rijen.map((r) => r.categorie_ruw).filter(Boolean)));
       uniek.forEach((ruw) => {
         const match = matchCategorie(ruw, categorieen);
+        // Let op: bij de losse "koppel categorieën"-stap hierboven wordt alleen
+        // op de ruwe categorietekst gematcht (niet per-product op naam),
+        // omdat dit stap voor unieke categoriewaarden is, niet per rij.
         if (match) nieuweMapping[ruw] = match;
       });
       setCategorieMapping(nieuweMapping);
@@ -124,6 +127,7 @@ export default function ImportPage() {
         }).eq("id", bestaand_id);
         if (error) mislukt++; else succes++;
       } else {
+        const { niveau, frequentie } = schatNiveauEnFrequentie(budgetklasse);
         const { error } = await supabase.from("products").insert({
           naam: rij.naam,
           merk: rij.merk || null,
@@ -132,15 +136,16 @@ export default function ImportPage() {
           provider_id: providerId || null,
           prijs: prijsGetal,
           budgetklasse,
+          geslacht: detecteerGeslacht(rij.naam),
           affiliate_url: rij.affiliate_url,
           afbeelding_url: rij.afbeelding_url || null,
           ean: rij.ean || null,
-          niveau: [],
-          geschikt_voor_frequentie: [],
+          niveau,
+          geschikt_voor_frequentie: frequentie,
           score: 4.0,
           bron: "csv_import",
           geclassificeerd: false,
-          actief: false,
+          actief: true,
         });
         if (error) mislukt++; else succes++;
       }

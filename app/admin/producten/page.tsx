@@ -13,9 +13,16 @@ interface Product {
   budgetklasse: string;
   actief: boolean;
   geclassificeerd: boolean;
+  geslacht: string | null;
   sport_naam: string;
   categorie_naam: string;
 }
+
+const GESLACHTEN = [
+  { waarde: "man", label: "Man" },
+  { waarde: "vrouw", label: "Vrouw" },
+  { waarde: "unisex", label: "Unisex" },
+];
 
 const NIVEAUS = [
   { waarde: "beginner", label: "Beginner" },
@@ -48,11 +55,13 @@ export default function ProductenPage() {
   const [categorieen, setCategorieen] = useState<{ id: string; naam: string }[]>([]);
   const [filterSport, setFilterSport] = useState("");
   const [filterCategorie, setFilterCategorie] = useState("");
+  const [filterGeslacht, setFilterGeslacht] = useState("");
   const [zoekterm, setZoekterm] = useState("");
 
   const [geselecteerd, setGeselecteerd] = useState<Set<string>>(new Set());
   const [bulkNiveaus, setBulkNiveaus] = useState<string[]>([]);
   const [bulkFrequenties, setBulkFrequenties] = useState<string[]>([]);
+  const [bulkGeslacht, setBulkGeslacht] = useState<string>("");
   const [bulkOpslaan, setBulkOpslaan] = useState(false);
   const [bulkMelding, setBulkMelding] = useState<string | null>(null);
 
@@ -72,7 +81,7 @@ export default function ProductenPage() {
     let query = supabase
       .from("products")
       .select(`
-        id, naam, merk, prijs, budgetklasse, actief, geclassificeerd,
+        id, naam, merk, prijs, budgetklasse, actief, geclassificeerd, geslacht,
         sports ( naam ), categories ( naam )
       `)
       .order("created_at", { ascending: false });
@@ -80,6 +89,7 @@ export default function ProductenPage() {
     if (filter === "niet_geclassificeerd") query = query.eq("geclassificeerd", false);
     if (filterSport) query = query.eq("sport_id", filterSport);
     if (filterCategorie) query = query.eq("category_id", filterCategorie);
+    if (filterGeslacht) query = query.eq("geslacht", filterGeslacht);
     if (zoekterm.trim()) query = query.ilike("naam", `%${zoekterm.trim()}%`);
 
     const { data } = await query;
@@ -91,6 +101,7 @@ export default function ProductenPage() {
       budgetklasse: p.budgetklasse,
       actief: p.actief,
       geclassificeerd: p.geclassificeerd,
+      geslacht: p.geslacht,
       sport_naam: Array.isArray(p.sports) ? p.sports[0]?.naam ?? "—" : (p.sports as { naam: string } | null)?.naam ?? "—",
       categorie_naam: Array.isArray(p.categories) ? p.categories[0]?.naam ?? "—" : (p.categories as { naam: string } | null)?.naam ?? "—",
     }));
@@ -102,7 +113,7 @@ export default function ProductenPage() {
     setGeselecteerd(new Set());
   }
 
-  useEffect(() => { laad(); }, [filter, filterSport, filterCategorie]);
+  useEffect(() => { laad(); }, [filter, filterSport, filterCategorie, filterGeslacht]);
 
   // Zoekterm met kleine vertraging toepassen, zodat niet elke toets een query triggert
   useEffect(() => {
@@ -141,14 +152,17 @@ export default function ProductenPage() {
     setBulkOpslaan(true);
     setBulkMelding(null);
 
+    const updateData: Record<string, unknown> = {
+      niveau: bulkNiveaus,
+      geschikt_voor_frequentie: bulkFrequenties,
+      geclassificeerd: true,
+      actief: true,
+    };
+    if (bulkGeslacht) updateData.geslacht = bulkGeslacht;
+
     const { error } = await supabase
       .from("products")
-      .update({
-        niveau: bulkNiveaus,
-        geschikt_voor_frequentie: bulkFrequenties,
-        geclassificeerd: true,
-        actief: true,
-      })
+      .update(updateData)
       .in("id", Array.from(geselecteerd));
 
     if (error) {
@@ -157,6 +171,7 @@ export default function ProductenPage() {
       setBulkMelding(`${geselecteerd.size} producten geclassificeerd en geactiveerd.`);
       setBulkNiveaus([]);
       setBulkFrequenties([]);
+      setBulkGeslacht("");
       await laad();
     }
     setBulkOpslaan(false);
@@ -194,7 +209,7 @@ export default function ProductenPage() {
           className="flex items-center justify-between mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/15 transition-colors"
         >
           <span className="text-amber-400 text-sm font-body">
-            ⚠️ {aantalNietGeclassificeerd} producten wachten nog op classificatie en staan daardoor niet zichtbaar in de configurator.
+            ℹ️ {aantalNietGeclassificeerd} producten staan live met een automatische inschatting (op basis van prijs/naam) — nog niet handmatig gecontroleerd door een admin.
           </span>
           <span className="text-amber-400 text-xs font-mono">Bekijk →</span>
         </Link>
@@ -226,6 +241,15 @@ export default function ProductenPage() {
           {categorieen.map((c) => <option key={c.id} value={c.id}>{c.naam}</option>)}
         </select>
 
+        <select
+          value={filterGeslacht}
+          onChange={(e) => setFilterGeslacht(e.target.value)}
+          className="bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-brand-ivory text-sm focus:outline-none focus:border-brand-gold"
+        >
+          <option value="">Alle geslachten</option>
+          {GESLACHTEN.map((g) => <option key={g.waarde} value={g.waarde}>{g.label}</option>)}
+        </select>
+
         <input
           type="text"
           value={zoekterm}
@@ -234,9 +258,9 @@ export default function ProductenPage() {
           className="flex-1 min-w-[200px] bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-brand-ivory text-sm focus:outline-none focus:border-brand-gold"
         />
 
-        {(filterSport || filterCategorie || zoekterm) && (
+        {(filterSport || filterCategorie || filterGeslacht || zoekterm) && (
           <button
-            onClick={() => { setFilterSport(""); setFilterCategorie(""); setZoekterm(""); }}
+            onClick={() => { setFilterSport(""); setFilterCategorie(""); setFilterGeslacht(""); setZoekterm(""); }}
             className="px-4 py-2.5 rounded-xl border border-brand-border text-brand-muted text-sm hover:text-brand-ivory transition-colors"
           >
             Filters wissen
@@ -251,7 +275,7 @@ export default function ProductenPage() {
             {geselecteerd.size} product{geselecteerd.size !== 1 ? "en" : ""} geselecteerd — ken in één keer niveau en frequentie toe:
           </p>
 
-          <div className="grid sm:grid-cols-2 gap-5 mb-4">
+          <div className="grid sm:grid-cols-3 gap-5 mb-4">
             <div>
               <p className="text-brand-muted text-xs font-mono uppercase tracking-widest mb-2">Niveau</p>
               <div className="flex flex-wrap gap-2">
@@ -274,6 +298,19 @@ export default function ProductenPage() {
                       bulkFrequenties.includes(f.waarde) ? "border-brand-gold bg-brand-gold/10 text-brand-gold" : "border-brand-border text-brand-muted"
                     }`}>
                     {bulkFrequenties.includes(f.waarde) && "✓ "}{f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-brand-muted text-xs font-mono uppercase tracking-widest mb-2">Geslacht (optioneel)</p>
+              <div className="flex flex-wrap gap-2">
+                {GESLACHTEN.map((g) => (
+                  <button key={g.waarde} onClick={() => setBulkGeslacht((prev) => prev === g.waarde ? "" : g.waarde)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-all ${
+                      bulkGeslacht === g.waarde ? "border-brand-gold bg-brand-gold/10 text-brand-gold" : "border-brand-border text-brand-muted"
+                    }`}>
+                    {bulkGeslacht === g.waarde && "✓ "}{g.label}
                   </button>
                 ))}
               </div>
@@ -325,7 +362,9 @@ export default function ProductenPage() {
                   <div className="flex items-center gap-2">
                     <p className="text-brand-ivory font-body">{product.naam}</p>
                     {!product.geclassificeerd && (
-                      <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-mono">TE CLASSIFICEREN</span>
+                      <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] font-mono" title="Niveau/frequentie/geslacht zijn automatisch ingeschat op basis van prijs en naam — nog niet door een admin bevestigd">
+                        AUTO-INGESCHAT
+                      </span>
                     )}
                   </div>
                   {product.merk && <p className="text-brand-muted text-xs font-mono">{product.merk}</p>}
