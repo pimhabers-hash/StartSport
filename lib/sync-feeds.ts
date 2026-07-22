@@ -48,6 +48,12 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
       // en de functie-tijdslimiet overschrijdt).
       const teInsertenen: Record<string, unknown>[] = [];
       const teUpdaten: Record<string, unknown>[] = [];
+      // Houdt bij welke productnamen we in DEZE synchronisatie al gaan
+      // toevoegen — voorkomt dubbele inserts wanneer een feed meerdere
+      // regels heeft voor exact hetzelfde product (bijv. één regel per
+      // maat/kleur-variant met identieke naam maar geen EAN).
+      const nieuweNamenDitRun = new Set<string>();
+      let dubbelOvergeslagen = 0;
 
       for (const rij of ruweRijen) {
         if (!rij.naam || !rij.prijs || !rij.affiliate_url) { mislukt++; continue; }
@@ -65,7 +71,19 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
           continue;
         }
 
-        const bestaand_id = (rij.ean && eanMap.get(rij.ean)) ?? naamMap.get(rij.naam.toLowerCase().trim());
+        const genormaliseerdeNaam = rij.naam.toLowerCase().trim();
+        const bestaand_id = (rij.ean && eanMap.get(rij.ean)) ?? naamMap.get(genormaliseerdeNaam);
+
+        if (!bestaand_id) {
+          // Alleen relevant voor NIEUWE producten: check of we deze naam
+          // al eerder in deze zelfde run hebben ingepland om toe te voegen.
+          if (nieuweNamenDitRun.has(genormaliseerdeNaam)) {
+            dubbelOvergeslagen++;
+            continue;
+          }
+          nieuweNamenDitRun.add(genormaliseerdeNaam);
+        }
+
         const budgetklasse = bepaalBudgetklasse(prijsGetal, Number(abo.grens_budget), Number(abo.grens_midden));
 
         if (bestaand_id) {
@@ -117,7 +135,7 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
       }
 
       const voorbeelden = Array.from(voorbeeldenOvergeslagenCategorieen);
-      const samenvatting = `${succes} verwerkt, ${overgeslagen} overgeslagen, ${mislukt} mislukt (${ruweRijen.length} totaal)` +
+      const samenvatting = `${succes} verwerkt, ${overgeslagen} overgeslagen (categorie), ${dubbelOvergeslagen} dubbel overgeslagen, ${mislukt} mislukt (${ruweRijen.length} totaal)` +
         (voorbeelden.length > 0 ? ` — voorbeelden overgeslagen categorieën: ${voorbeelden.map((v) => `"${v}"`).join(", ")}` : "");
       resultaten[abo.naam] = samenvatting;
 
