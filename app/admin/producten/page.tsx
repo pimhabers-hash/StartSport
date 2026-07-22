@@ -43,6 +43,13 @@ export default function ProductenPage() {
   const [laden, setLaden] = useState(true);
   const [aantalNietGeclassificeerd, setAantalNietGeclassificeerd] = useState(0);
 
+  // Filters
+  const [sporten, setSporten] = useState<{ id: string; naam: string }[]>([]);
+  const [categorieen, setCategorieen] = useState<{ id: string; naam: string }[]>([]);
+  const [filterSport, setFilterSport] = useState("");
+  const [filterCategorie, setFilterCategorie] = useState("");
+  const [zoekterm, setZoekterm] = useState("");
+
   const [geselecteerd, setGeselecteerd] = useState<Set<string>>(new Set());
   const [bulkNiveaus, setBulkNiveaus] = useState<string[]>([]);
   const [bulkFrequenties, setBulkFrequenties] = useState<string[]>([]);
@@ -51,6 +58,17 @@ export default function ProductenPage() {
 
   async function laad() {
     setLaden(true);
+
+    // Filteropties ophalen (alleen als nog niet geladen)
+    if (sporten.length === 0) {
+      const { data: s } = await supabase.from("sports").select("id, naam").order("volgorde");
+      setSporten(s ?? []);
+    }
+    if (categorieen.length === 0) {
+      const { data: c } = await supabase.from("categories").select("id, naam").order("volgorde");
+      setCategorieen(c ?? []);
+    }
+
     let query = supabase
       .from("products")
       .select(`
@@ -60,6 +78,9 @@ export default function ProductenPage() {
       .order("created_at", { ascending: false });
 
     if (filter === "niet_geclassificeerd") query = query.eq("geclassificeerd", false);
+    if (filterSport) query = query.eq("sport_id", filterSport);
+    if (filterCategorie) query = query.eq("category_id", filterCategorie);
+    if (zoekterm.trim()) query = query.ilike("naam", `%${zoekterm.trim()}%`);
 
     const { data } = await query;
     const verwerkt: Product[] = (data ?? []).map((p) => ({
@@ -81,7 +102,14 @@ export default function ProductenPage() {
     setGeselecteerd(new Set());
   }
 
-  useEffect(() => { laad(); }, [filter]);
+  useEffect(() => { laad(); }, [filter, filterSport, filterCategorie]);
+
+  // Zoekterm met kleine vertraging toepassen, zodat niet elke toets een query triggert
+  useEffect(() => {
+    const timer = setTimeout(() => { laad(); }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoekterm]);
 
   function toggleSelectie(id: string) {
     setGeselecteerd((prev) => {
@@ -178,6 +206,44 @@ export default function ProductenPage() {
         </Link>
       )}
 
+      {/* Filterbalk */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <select
+          value={filterSport}
+          onChange={(e) => setFilterSport(e.target.value)}
+          className="bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-brand-ivory text-sm focus:outline-none focus:border-brand-gold"
+        >
+          <option value="">Alle sporten</option>
+          {sporten.map((s) => <option key={s.id} value={s.id}>{s.naam}</option>)}
+        </select>
+
+        <select
+          value={filterCategorie}
+          onChange={(e) => setFilterCategorie(e.target.value)}
+          className="bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-brand-ivory text-sm focus:outline-none focus:border-brand-gold"
+        >
+          <option value="">Alle categorieën</option>
+          {categorieen.map((c) => <option key={c.id} value={c.id}>{c.naam}</option>)}
+        </select>
+
+        <input
+          type="text"
+          value={zoekterm}
+          onChange={(e) => setZoekterm(e.target.value)}
+          placeholder="Zoek op productnaam..."
+          className="flex-1 min-w-[200px] bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-brand-ivory text-sm focus:outline-none focus:border-brand-gold"
+        />
+
+        {(filterSport || filterCategorie || zoekterm) && (
+          <button
+            onClick={() => { setFilterSport(""); setFilterCategorie(""); setZoekterm(""); }}
+            className="px-4 py-2.5 rounded-xl border border-brand-border text-brand-muted text-sm hover:text-brand-ivory transition-colors"
+          >
+            Filters wissen
+          </button>
+        )}
+      </div>
+
       {/* Bulk-actiebalk — verschijnt zodra er iets geselecteerd is */}
       {geselecteerd.size > 0 && (
         <div className="card-surface rounded-2xl p-6 mb-6 border-brand-gold/30">
@@ -237,7 +303,7 @@ export default function ProductenPage() {
           <thead>
             <tr className="border-b border-brand-border">
               <th className="w-10 px-5 py-3">
-                <input type="checkbox" checked={alleGeselecteerd} onChange={toggleAlles} className="w-4 h-4 accent-[#C6A15B]" />
+                <input type="checkbox" checked={alleGeselecteerd} onChange={toggleAlles} className="w-4 h-4 accent-[#C6A15B]" title={`Selecteer alle ${producten.length} zichtbare producten`} />
               </th>
               {["Product", "Sport", "Categorie", "Budget", "Prijs", "Status", ""].map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-brand-muted text-xs font-mono uppercase tracking-widest">{h}</th>
