@@ -42,6 +42,13 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
       let succes = 0, mislukt = 0, overgeslagen = 0;
       const voorbeeldenOvergeslagenCategorieen = new Set<string>();
 
+      // Verzamel eerst alle te verwerken producten in twee lijsten —
+      // daarna schrijven we ze in batches weg (i.p.v. één database-
+      // aanroep per product, wat bij duizenden producten te traag is
+      // en de functie-tijdslimiet overschrijdt).
+      const teInsertenen: Record<string, unknown>[] = [];
+      const teUpdaten: Record<string, unknown>[] = [];
+
       for (const rij of ruweRijen) {
         if (!rij.naam || !rij.prijs || !rij.affiliate_url) { mislukt++; continue; }
         const prijsGetal = parseFloat(rij.prijs.replace(",", "."));
@@ -62,18 +69,18 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
         const budgetklasse = bepaalBudgetklasse(prijsGetal, Number(abo.grens_budget), Number(abo.grens_midden));
 
         if (bestaand_id) {
-          const { error } = await supabase.from("products").update({
+          teUpdaten.push({
+            id: bestaand_id,
             prijs: prijsGetal,
             affiliate_url: rij.affiliate_url,
             afbeelding_url: rij.afbeelding_url || null,
-          }).eq("id", bestaand_id);
-          if (error) mislukt++; else succes++;
+          });
         } else {
-          const { error } = await supabase.from("products").insert({
+          teInsertenen.push({
             naam: rij.naam,
             merk: rij.merk || null,
             sport_id: abo.sport_id,
-            category_id: category_id ?? (categorieen ?? [])[0]?.id,
+            category_id,
             provider_id: abo.provider_id,
             prijs: prijsGetal,
             budgetklasse,
@@ -87,8 +94,26 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
             geclassificeerd: false,
             actief: false,
           });
-          if (error) mislukt++; else succes++;
         }
+      }
+
+      // In batches van 500 wegschrijven — ruim binnen de limieten van
+      // zowel Supabase als de functie-tijdslimiet, ook bij 40.000+ rijen.
+      const BATCH_GROOTTE = 500;
+
+      for (let i = 0; i < teInsertenen.length; i += BATCH_GROOTTE) {
+        const batch = teInsertenen.slice(i, i + BATCH_GROOTTE);
+        const { error } = await supabase.from("products").insert(batch);
+        if (error) mislukt += batch.length; else succes += batch.length;
+      }
+
+      for (let i = 0; i < teUpdaten.length; i += BATCH_GROOTTE) {
+        const batch = teUpdaten.slice(i, i + BATCH_GROOTTE);
+        // upsert op basis van 'id' werkt hier als bulk-update, omdat elke
+        // rij al een bestaand product-id heeft (primary key conflict
+        // triggert een update in plaats van een nieuwe insert).
+        const { error } = await supabase.from("products").upsert(batch, { onConflict: "id" });
+        if (error) mislukt += batch.length; else succes += batch.length;
       }
 
       const voorbeelden = Array.from(voorbeeldenOvergeslagenCategorieen);
