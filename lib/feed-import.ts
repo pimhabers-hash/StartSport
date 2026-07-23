@@ -217,39 +217,55 @@ export function schatNiveauEnFrequentie(budgetklasse: "budget" | "middenklasse" 
 // levert Spaanstalige productdata), terwijl onze eigen categorieën
 // Nederlandse namen hebben.
 const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
-  racket:       ["racket", "raquet", "raqueta", "pala", "palas", "paddle", "racquet"],
+  racket:       ["racket", "raquet", "raqueta", "pala", "paddle", "racquet"],
   schoenen:     ["schoen", "shoe", "zapatilla", "calzado", "footwear"],
   ballen:       ["bal", "ball", "bola", "pelota"],
   tassen:       ["tas", "bag", "bolsa", "mochila", "backpack"],
-  kleding:      ["kleding", "cloth", "apparel", "ropa", "camiseta", "textil", "shirt", "short", "pantalon"],
-  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca"],
+  kleding:      [
+    "kleding", "cloth", "clothing", "apparel", "ropa", "camiseta", "textil",
+    "shirt", "tshirt", "t-shirt",
+    "short", "pant", "pantalon", "trouser",
+    "jacket", "chaqueta",
+    "sweat", "sweater", "sweatshirt", "hoodie", "hooded", "sudadera",
+    "polo", "tank", "skirt", "falda", "dress", "vestido",
+  ],
+  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "cap", "gorra"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
   bescherming:  ["bescherming", "protection", "proteccion", "guard"],
 };
+
+function escapeRegex(tekst: string): string {
+  return tekst.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Test of een trefwoord als los WOORD voorkomt in de tekst (met optioneel
+ * meervoud op -s) — niet als losse substring. Dit voorkomt valse matches
+ * zoals "bal" (trefwoord voor Ballen) dat anders ook zou matchen binnen
+ * namen als "Baltar", "Balda", "Balto" of "Balon" (Bullpadel-kledinglijnen).
+ */
+function bevatAlsWoord(tekst: string, trefwoord: string): boolean {
+  const patroon = new RegExp(`\\b${escapeRegex(trefwoord)}s?\\b`, "i");
+  return patroon.test(tekst);
+}
 
 export function matchCategorie(
   ruweTekst: string,
   categorieen: { id: string; naam: string; slug: string }[],
   productNaam: string = ""
 ): string | null {
-  // Probeer eerst de ruwe categorietekst, en als die niks oplevert de
-  // productnaam zelf — sommige feeds vullen merchant_category namelijk
-  // met de sportnaam in plaats van het producttype (bijv. "Tennis" voor
-  // een padelracket), waardoor de productnaam betrouwbaarder is.
   const kandidaten = [ruweTekst, productNaam].filter(Boolean);
 
   for (const tekst of kandidaten) {
-    const laag = tekst.toLowerCase();
-
     const directeMatch = categorieen.find(
-      (c) => laag.includes(c.slug) || laag.includes(c.naam.toLowerCase())
+      (c) => bevatAlsWoord(tekst, c.slug) || bevatAlsWoord(tekst, c.naam)
     );
     if (directeMatch) return directeMatch.id;
 
     for (const categorie of categorieen) {
       const trefwoorden = CATEGORIE_TREFWOORDEN[categorie.slug];
       if (!trefwoorden) continue;
-      if (trefwoorden.some((woord) => laag.includes(woord))) {
+      if (trefwoorden.some((woord) => bevatAlsWoord(tekst, woord))) {
         return categorie.id;
       }
     }
