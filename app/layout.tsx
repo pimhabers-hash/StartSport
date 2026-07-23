@@ -31,35 +31,6 @@ export default function RootLayout({
         {children}
         <CookieBanner />
         <GoogleAnalytics />
-        <Script id="tradetracker" strategy="afterInteractive">
-  {`
-    var _TradeTrackerTagOptions = {
-      t: 'a',
-      s: '513299',
-      chk: '976380d38e1689026685aee2d9001276',
-      overrideOptions: {}
-    };
-
-    (function() {
-      var tt = document.createElement('script'),
-          s = document.getElementsByTagName('script')[0];
-
-      tt.setAttribute('type', 'text/javascript');
-      tt.setAttribute(
-        'src',
-        (document.location.protocol === 'https:' ? 'https' : 'http') +
-        '://tm.tradetracker.net/tag?t=' +
-        _TradeTrackerTagOptions.t +
-        '&s=' +
-        _TradeTrackerTagOptions.s +
-        '&chk=' +
-        _TradeTrackerTagOptions.chk
-      );
-
-      s.parentNode.insertBefore(tt, s);
-    })();
-  `}
-</Script>
       </body>
     </html>
   );
