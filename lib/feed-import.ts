@@ -249,6 +249,14 @@ function bevatAlsWoord(tekst: string, trefwoord: string): boolean {
   return patroon.test(tekst);
 }
 
+// Volgorde waarin categorieën gecontroleerd worden. Belangrijk bij
+// samengestelde productnamen zoals "Racket Bag" — dat is een TAS (het
+// zelfstandig naamwoord, wat het product daadwerkelijk is), geen racket
+// (dat beschrijft alleen waar de tas voor bedoeld is). Door "tassen" en
+// "schoenen" vóór "racket" te checken, wint de juiste, specifiekere
+// categorie in plaats van het eerst-gevonden woord.
+const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "kleding", "ballen", "accessoires", "voeding", "bescherming", "racket"];
+
 export function matchCategorie(
   ruweTekst: string,
   categorieen: { id: string; naam: string; slug: string }[],
@@ -256,19 +264,33 @@ export function matchCategorie(
 ): string | null {
   const kandidaten = [ruweTekst, productNaam].filter(Boolean);
 
-  for (const tekst of kandidaten) {
-    const directeMatch = categorieen.find(
-      (c) => bevatAlsWoord(tekst, c.slug) || bevatAlsWoord(tekst, c.naam)
-    );
-    if (directeMatch) return directeMatch.id;
+  // Sorteer de meegegeven categorieën op onze vaste prioriteitsvolgorde,
+  // zodat categorieën die niet in de lijst staan (aangepaste categorieën)
+  // gewoon achteraan komen, zonder te crashen.
+  const gesorteerdeCategorieen = [...categorieen].sort((a, b) => {
+    const prioA = CATEGORIE_PRIORITEIT.indexOf(a.slug);
+    const prioB = CATEGORIE_PRIORITEIT.indexOf(b.slug);
+    return (prioA === -1 ? 999 : prioA) - (prioB === -1 ? 999 : prioB);
+  });
 
-    for (const categorie of categorieen) {
+  for (const tekst of kandidaten) {
+    // Trefwoorden eerst, in prioriteitsvolgorde — dit zijn specifieke
+    // producttype-indicatoren (bag/shoe/ball) en betrouwbaarder dan een
+    // toevallige match op onze eigen categorienaam.
+    for (const categorie of gesorteerdeCategorieen) {
       const trefwoorden = CATEGORIE_TREFWOORDEN[categorie.slug];
       if (!trefwoorden) continue;
       if (trefwoorden.some((woord) => bevatAlsWoord(tekst, woord))) {
         return categorie.id;
       }
     }
+
+    // Vangnet: directe match op onze eigen categorienaam/slug (bijv.
+    // Nederlandse productnamen die toevallig geen Engels trefwoord bevatten)
+    const directeMatch = gesorteerdeCategorieen.find(
+      (c) => bevatAlsWoord(tekst, c.slug) || bevatAlsWoord(tekst, c.naam)
+    );
+    if (directeMatch) return directeMatch.id;
   }
 
   return null;
