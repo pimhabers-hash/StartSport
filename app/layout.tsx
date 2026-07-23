@@ -3,6 +3,8 @@ import "./globals.css";
 import { CookieBanner } from "@/components/legal/CookieBanner";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 
+
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://startsport.nl"),
   title: "StartSport — Vind jouw perfecte sportuitrusting",
