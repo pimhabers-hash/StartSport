@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { CookieBanner } from "@/components/legal/CookieBanner";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
-
-
+import { TradeTrackerTag } from "@/components/analytics/TradeTrackerTag";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://startsport.nl"),
@@ -31,6 +30,7 @@ export default function RootLayout({
         {children}
         <CookieBanner />
         <GoogleAnalytics />
+        <TradeTrackerTag />
       </body>
     </html>
   );

@@ -4,14 +4,13 @@ import { useEffect, useState } from "react";
 import Script from "next/script";
 
 const OPSLAG_KEY = "startsport_cookie_consent";
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 interface OpgeslagenConsent {
   status: string;
   voorkeuren: { analytics: boolean; marketing: boolean };
 }
 
-export function GoogleAnalytics() {
+export function TradeTrackerTag() {
   const [toegestaan, setToegestaan] = useState(false);
 
   useEffect(() => {
@@ -20,17 +19,14 @@ export function GoogleAnalytics() {
       if (!opgeslagen) return;
       try {
         const consent: OpgeslagenConsent = JSON.parse(opgeslagen);
-        setToegestaan(consent.voorkeuren?.analytics === true);
+        setToegestaan(consent.voorkeuren?.marketing === true);
       } catch {
         // ongeldige data, negeren
       }
     }
 
     checkConsent();
-
-    // Luister ook naar wijzigingen (bijv. als iemand later alsnog akkoord geeft)
     window.addEventListener("storage", checkConsent);
-    // Custom event dat de CookieBanner kan triggeren na een keuze
     window.addEventListener("cookie-consent-updated", checkConsent);
 
     return () => {
@@ -39,24 +35,24 @@ export function GoogleAnalytics() {
     };
   }, []);
 
-  if (!toegestaan || !GA_MEASUREMENT_ID) return null;
+  if (!toegestaan) return null;
 
   return (
-    <>
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
-      />
-      <Script id="google-analytics" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}', {
-            anonymize_ip: true
-          });
-        `}
-      </Script>
-    </>
+    <Script id="tradetracker-supertag" strategy="afterInteractive">
+      {`
+        var _TradeTrackerTagOptions = {
+          t: 'a',
+          s: '513299',
+          chk: '976380d38e1689026685aee2d9001276',
+          overrideOptions: {}
+        };
+        (function() {
+          var tt = document.createElement('script'), s = document.getElementsByTagName('script')[0];
+          tt.setAttribute('type', 'text/javascript');
+          tt.setAttribute('src', (document.location.protocol == 'https:' ? 'https' : 'http') + '://tm.tradetracker.net/tag?t=' + _TradeTrackerTagOptions.t + '&s=' + _TradeTrackerTagOptions.s + '&chk=' + _TradeTrackerTagOptions.chk);
+          s.parentNode.insertBefore(tt, s);
+        })();
+      `}
+    </Script>
   );
 }
