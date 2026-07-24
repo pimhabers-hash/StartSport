@@ -15,6 +15,10 @@ export default function NieuwArtikelPage() {
   const [inhoud, setInhoud] = useState("");
   const [sportId, setSportId] = useState("");
   const [gepubliceerd, setGepubliceerd] = useState(false);
+  const [auteurNaam, setAuteurNaam] = useState("StartSport Redactie");
+  const [auteurRol, setAuteurRol] = useState("Redactie");
+  const [auteurBio, setAuteurBio] = useState("Onze redactie test en vergelijkt sportmateriaal om jou te helpen de juiste keuze te maken.");
+  const [faqItems, setFaqItems] = useState<{ vraag: string; antwoord: string }[]>([]);
   const [sporten, setSporten] = useState<{ label: string; waarde: string }[]>([]);
   const [opslaan, setOpslaan] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -43,6 +47,11 @@ export default function NieuwArtikelPage() {
       titel, slug, samenvatting, inhoud,
       sport_id: sportId || null,
       gepubliceerd,
+      auteur_naam: auteurNaam || "StartSport Redactie",
+      auteur_rol: auteurRol || "Redactie",
+      auteur_bio: auteurBio || null,
+      faq: faqItems.filter((f) => f.vraag.trim() && f.antwoord.trim()),
+      laatst_bijgewerkt: new Date().toISOString().slice(0, 10),
     });
 
     if (error) { setFout(error.message); setOpslaan(false); return; }
@@ -82,6 +91,62 @@ export default function NieuwArtikelPage() {
           />
           <p className="text-brand-muted text-xs font-mono mt-1">Platte tekst — lege regel = nieuwe alinea. Geen opmaak-codes nodig.</p>
         </div>
+
+        {/* Auteur — E-E-A-T signaal, toont expertise/identiteit op de pagina */}
+        <div className="space-y-4 border-t border-brand-border pt-6">
+          <p className="text-brand-gold text-xs font-mono uppercase tracking-widest">Auteur (E-E-A-T)</p>
+          <div className="grid grid-cols-2 gap-4">
+            <FormVeld label="Naam" naam="auteurNaam" waarde={auteurNaam} onChange={(v) => setAuteurNaam(v as string)} />
+            <FormVeld label="Rol" naam="auteurRol" waarde={auteurRol} onChange={(v) => setAuteurRol(v as string)} placeholder="bijv. Padel-specialist" />
+          </div>
+          <FormVeld label="Korte bio" naam="auteurBio" type="textarea" waarde={auteurBio} onChange={(v) => setAuteurBio(v as string)} hulptekst="Verschijnt onderaan het artikel — toont expertise en vertrouwen" />
+        </div>
+
+        {/* FAQ editor */}
+        <div className="space-y-4 border-t border-brand-border pt-6">
+          <div className="flex items-center justify-between">
+            <p className="text-brand-gold text-xs font-mono uppercase tracking-widest">Veelgestelde vragen (optioneel)</p>
+            <button
+              type="button"
+              onClick={() => setFaqItems((prev) => [...prev, { vraag: "", antwoord: "" }])}
+              className="text-xs font-mono text-brand-gold hover:text-brand-gold-light transition-colors"
+            >
+              ＋ Vraag toevoegen
+            </button>
+          </div>
+          {faqItems.map((item, i) => (
+            <div key={i} className="p-4 rounded-xl bg-brand-surface border border-brand-border space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-brand-muted text-xs font-mono">Vraag {i + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => setFaqItems((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="text-red-400 text-xs font-mono hover:text-red-300"
+                >
+                  Verwijderen
+                </button>
+              </div>
+              <input
+                type="text"
+                value={item.vraag}
+                onChange={(e) => setFaqItems((prev) => prev.map((f, idx) => idx === i ? { ...f, vraag: e.target.value } : f))}
+                placeholder="Vraag"
+                className="w-full bg-brand-black border border-brand-border rounded-lg px-3 py-2 text-brand-ivory text-sm focus:outline-none focus:border-brand-gold"
+              />
+              <textarea
+                value={item.antwoord}
+                onChange={(e) => setFaqItems((prev) => prev.map((f, idx) => idx === i ? { ...f, antwoord: e.target.value } : f))}
+                placeholder="Antwoord"
+                rows={2}
+                className="w-full bg-brand-black border border-brand-border rounded-lg px-3 py-2 text-brand-ivory text-sm focus:outline-none focus:border-brand-gold resize-none"
+              />
+            </div>
+          ))}
+          {faqItems.length === 0 && (
+            <p className="text-brand-muted text-xs font-mono">Geen vragen toegevoegd. FAQ's verbeteren SEO en tonen diepgang.</p>
+          )}
+        </div>
+
         <FormVeld
           label="Direct publiceren"
           naam="gepubliceerd"

@@ -13,14 +13,19 @@ export async function SportenGrid() {
 
   return (
     <section id="sporten" className="py-24 px-6 lg:px-12 max-w-7xl mx-auto">
-      <div className="mb-14">
-        <p className="font-mono text-brand-gold text-xs uppercase tracking-[0.2em] mb-3">
-          Beschikbare sporten
-        </p>
-        <h2 className="font-display text-4xl lg:text-5xl text-brand-ivory leading-tight">
-          Kies jouw{" "}
-          <em className="not-italic text-gold-gradient font-light">sport</em>
-        </h2>
+      <div className="mb-14 flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <p className="font-mono text-brand-gold text-xs uppercase tracking-[0.2em] mb-3">
+            Beschikbare sporten
+          </p>
+          <h2 className="font-display text-4xl lg:text-5xl text-brand-ivory leading-tight">
+            Kies jouw{" "}
+            <em className="not-italic text-gold-gradient font-light">sport</em>
+          </h2>
+        </div>
+        <Link href="/sporten" className="text-brand-gold text-sm font-mono hover:text-brand-gold-light transition-colors">
+          Bekijk alle sporten & koopgidsen →
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
