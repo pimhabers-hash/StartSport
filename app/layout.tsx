@@ -17,6 +17,9 @@ export const metadata: Metadata = {
     locale: "nl_NL",
     type: "website",
   },
+  other: {
+    "tradetracker-site-verification": "0143437e96ae183e8402ac0f20e307cd27e79169",
+  },
 };
 
 export default function RootLayout({
