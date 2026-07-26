@@ -35,7 +35,8 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
 
       const { data: bestaandeProducten } = await supabase
         .from("products")
-        .select("id, naam, ean");
+        .select("id, naam, ean")
+        .limit(100000);
       const naamMap = new Map((bestaandeProducten ?? []).map((p) => [p.naam.toLowerCase().trim(), p.id]));
       const eanMap = new Map((bestaandeProducten ?? []).filter((p) => p.ean).map((p) => [p.ean, p.id]));
 
