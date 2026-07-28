@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { FormVeld } from "@/components/admin/FormVeld";
 
+interface FaqItem { vraag: string; antwoord: string; }
+
 export default function BewerkArtikelPage() {
   const router = useRouter();
   const params = useParams();
@@ -24,6 +26,11 @@ export default function BewerkArtikelPage() {
   const [gepubliceerd, setGepubliceerd] = useState(false);
   const [sporten, setSporten] = useState<{ label: string; waarde: string }[]>([]);
 
+  const [auteurNaam, setAuteurNaam] = useState("StartSport Redactie");
+  const [auteurRol, setAuteurRol] = useState("Redactie");
+  const [auteurBio, setAuteurBio] = useState("");
+  const [faqItems, setFaqItems] = useState<FaqItem[]>([]);
+
   useEffect(() => {
     async function laadData() {
       const [{ data: artikel }, { data: s }] = await Promise.all([
@@ -37,6 +44,10 @@ export default function BewerkArtikelPage() {
         setInhoud(artikel.inhoud);
         setSportId(artikel.sport_id ?? "");
         setGepubliceerd(artikel.gepubliceerd);
+        setAuteurNaam(artikel.auteur_naam ?? "StartSport Redactie");
+        setAuteurRol(artikel.auteur_rol ?? "Redactie");
+        setAuteurBio(artikel.auteur_bio ?? "");
+        setFaqItems(Array.isArray(artikel.faq) ? artikel.faq : []);
       }
       setSporten((s ?? []).map((x) => ({ label: x.naam, waarde: x.id })));
       setLaden(false);
@@ -55,6 +66,11 @@ export default function BewerkArtikelPage() {
       titel, slug, samenvatting, inhoud,
       sport_id: sportId || null,
       gepubliceerd,
+      auteur_naam: auteurNaam || "StartSport Redactie",
+      auteur_rol: auteurRol || "Redactie",
+      auteur_bio: auteurBio || null,
+      faq: faqItems.filter((f) => f.vraag.trim() && f.antwoord.trim()),
+      laatst_bijgewerkt: new Date().toISOString().slice(0, 10),
     }).eq("id", id);
 
     if (error) { setFout(error.message); setOpslaan(false); return; }
@@ -91,6 +107,56 @@ export default function BewerkArtikelPage() {
             className="w-full bg-brand-surface border border-brand-border rounded-xl px-4 py-3 text-brand-ivory text-sm font-body focus:outline-none focus:border-brand-gold transition-colors resize-none leading-relaxed"
           />
         </div>
+
+        {/* Auteur — E-E-A-T */}
+        <div className="space-y-4 border-t border-brand-border pt-6">
+          <p className="text-brand-gold text-xs font-mono uppercase tracking-widest">Auteur (E-E-A-T)</p>
+          <div className="grid grid-cols-2 gap-4">
+            <FormVeld label="Naam" naam="auteurNaam" waarde={auteurNaam} onChange={(v) => setAuteurNaam(v as string)} />
+            <FormVeld label="Rol" naam="auteurRol" waarde={auteurRol} onChange={(v) => setAuteurRol(v as string)} placeholder="bijv. Padel-specialist" />
+          </div>
+          <FormVeld label="Korte bio" naam="auteurBio" type="textarea" waarde={auteurBio} onChange={(v) => setAuteurBio(v as string)} hulptekst="Verschijnt onderaan het artikel" />
+        </div>
+
+        {/* FAQ editor */}
+        <div className="space-y-4 border-t border-brand-border pt-6">
+          <div className="flex items-center justify-between">
+            <p className="text-brand-gold text-xs font-mono uppercase tracking-widest">Veelgestelde vragen</p>
+            <button type="button" onClick={() => setFaqItems((prev) => [...prev, { vraag: "", antwoord: "" }])}
+              className="text-xs font-mono text-brand-gold hover:text-brand-gold-light transition-colors">
+              ＋ Vraag toevoegen
+            </button>
+          </div>
+          {faqItems.map((item, i) => (
+            <div key={i} className="p-4 rounded-xl bg-brand-surface border border-brand-border space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-brand-muted text-xs font-mono">Vraag {i + 1}</span>
+                <button type="button" onClick={() => setFaqItems((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="text-red-400 text-xs font-mono hover:text-red-300">
+                  Verwijderen
+                </button>
+              </div>
+              <input
+                type="text"
+                value={item.vraag}
+                onChange={(e) => setFaqItems((prev) => prev.map((f, idx) => idx === i ? { ...f, vraag: e.target.value } : f))}
+                placeholder="Vraag"
+                className="w-full bg-brand-black border border-brand-border rounded-lg px-3 py-2 text-brand-ivory text-sm focus:outline-none focus:border-brand-gold"
+              />
+              <textarea
+                value={item.antwoord}
+                onChange={(e) => setFaqItems((prev) => prev.map((f, idx) => idx === i ? { ...f, antwoord: e.target.value } : f))}
+                placeholder="Antwoord"
+                rows={2}
+                className="w-full bg-brand-black border border-brand-border rounded-lg px-3 py-2 text-brand-ivory text-sm focus:outline-none focus:border-brand-gold resize-none"
+              />
+            </div>
+          ))}
+          {faqItems.length === 0 && (
+            <p className="text-brand-muted text-xs font-mono">Geen vragen toegevoegd.</p>
+          )}
+        </div>
+
         <FormVeld label="Gepubliceerd" naam="gepubliceerd" type="checkbox" waarde={gepubliceerd} onChange={(v) => setGepubliceerd(v as boolean)} />
 
         {fout && <p className="text-red-400 text-sm font-mono">{fout}</p>}

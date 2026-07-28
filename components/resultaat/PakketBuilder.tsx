@@ -111,7 +111,13 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
                       {/* Afbeelding */}
                       <div className="relative h-32 bg-brand-surface flex items-center justify-center">
                         {product.afbeelding_url ? (
-                          <Image src={product.afbeelding_url} alt={product.naam} fill className="object-contain p-3" />
+                          <Image
+                            src={product.afbeelding_url}
+                            alt={product.naam}
+                            fill
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
+                            className="object-contain p-3"
+                          />
                         ) : (
                           <span className="text-3xl opacity-30">📦</span>
                         )}
@@ -134,7 +140,12 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
                         {product.merk && (
                           <p className="text-brand-muted text-[10px] font-mono uppercase tracking-widest mb-0.5">{product.merk}</p>
                         )}
-                        <p className="text-brand-ivory text-sm font-body leading-snug mb-2 line-clamp-2">{product.naam}</p>
+                        <p className="text-brand-ivory text-sm font-body leading-snug mb-1 line-clamp-2">{product.naam}</p>
+                        {product.uitleg && (
+                          <p className="text-brand-muted text-xs font-body leading-snug mb-2 line-clamp-2">
+                            {product.uitleg}
+                          </p>
+                        )}
                         <p className="font-mono text-brand-gold text-base">
                           €{product.prijs.toFixed(2).replace(".", ",")}
                         </p>
@@ -167,12 +178,12 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
               <div key={product.id} className="flex items-center gap-3 pb-3 border-b border-brand-border/50 last:border-0">
                 <div className="w-10 h-10 rounded-lg bg-brand-surface flex items-center justify-center flex-shrink-0 overflow-hidden relative">
                   {product.afbeelding_url ? (
-                    <Image src={product.afbeelding_url} alt={product.naam} fill className="object-contain p-1" />
+                    <Image src={product.afbeelding_url} alt={product.naam} fill sizes="40px" className="object-contain p-1" />
                   ) : (
                     <span className="text-sm opacity-30">📦</span>
                   )}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1" title={product.uitleg ?? undefined}>
                   <p className="text-brand-muted text-[10px] font-mono uppercase tracking-wide">{product.category.naam}</p>
                   <p className="text-brand-ivory text-xs font-body truncate">{product.naam}</p>
                 </div>

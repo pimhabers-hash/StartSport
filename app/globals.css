@@ -12,6 +12,15 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Vangnet: voorkomt dat een afbeelding ooit breder wordt weergegeven
+     dan zijn omliggende container — vooral belangrijk op mobiel, waar
+     een vergeten breedte-beperking een afbeelding buiten het scherm
+     kan laten uitsteken. */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
   ::selection {
     background-color: #C6A15B;
     color: #0A0B0D;
