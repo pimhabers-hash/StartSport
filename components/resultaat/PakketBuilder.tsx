@@ -9,7 +9,6 @@ interface PakketBuilderProps {
 }
 
 export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
-  // Standaard: beste match per categorie is geselecteerd
   const [selectie, setSelectie] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     categorieOpties.forEach((c) => {
@@ -18,7 +17,6 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
     return init;
   });
 
-  // Categorieën die de gebruiker bewust heeft uitgevinkt
   const [uitgevinkt, setUitgevinkt] = useState<Set<string>>(new Set());
 
   function kiesProduct(categoryId: string, productId: string) {
@@ -39,7 +37,6 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
     });
   }
 
-  // Bouw de lijst met daadwerkelijk geselecteerde producten (voor overzicht + totaal)
   const geselecteerdeProducten = useMemo(() => {
     const lijst: PakketProduct[] = [];
     categorieOpties.forEach((c) => {
@@ -69,24 +66,24 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
     <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
 
       {/* Linkerkant: categorie-secties met suggesties */}
-      <div className="space-y-10">
+      <div className="space-y-10 min-w-0">
         {categorieOpties.map((c) => {
           const actieveId = selectie[c.category.id];
           const isUitgevinkt = uitgevinkt.has(c.category.id);
 
           return (
             <div key={c.category.id}>
-              {/* Sectie-header per categorie */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <h3 className="font-display text-xl text-brand-ivory">{c.category.naam}</h3>
-                  <span className="px-2 py-0.5 rounded-full bg-brand-surface text-brand-muted text-xs font-mono">
+              {/* Sectie-header per categorie — wrapt netjes op smalle schermen */}
+              <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2 mb-4">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <h3 className="font-display text-xl text-brand-ivory truncate">{c.category.naam}</h3>
+                  <span className="px-2 py-0.5 rounded-full bg-brand-surface text-brand-muted text-xs font-mono flex-shrink-0">
                     {c.opties.length} optie{c.opties.length !== 1 ? "s" : ""}
                   </span>
                 </div>
                 <button
                   onClick={() => toggleCategorie(c.category.id)}
-                  className="text-xs font-mono text-brand-muted hover:text-brand-ivory transition-colors"
+                  className="text-xs font-mono text-brand-muted hover:text-brand-ivory transition-colors flex-shrink-0"
                 >
                   {isUitgevinkt ? "+ Toch toevoegen" : "− Niet nodig"}
                 </button>
@@ -102,7 +99,7 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
                     <button
                       key={product.id}
                       onClick={() => kiesProduct(c.category.id, product.id)}
-                      className={`text-left rounded-2xl overflow-hidden border transition-all duration-200 ${
+                      className={`text-left rounded-2xl overflow-hidden border transition-all duration-200 min-w-0 ${
                         isGeselecteerd
                           ? "border-brand-gold bg-brand-gold/5 shadow-lg shadow-brand-gold/10"
                           : "border-brand-border bg-brand-card hover:border-brand-gold/30"
@@ -160,7 +157,7 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
       </div>
 
       {/* Rechterkant: sticky pakket-overzicht */}
-      <div className="lg:sticky lg:top-24">
+      <div className="lg:sticky lg:top-24 min-w-0">
         <div className="card-surface rounded-2xl p-6">
           <h3 className="font-display text-lg text-brand-ivory mb-1">Jouw pakket</h3>
           <p className="text-brand-muted text-xs font-mono mb-5">
@@ -195,9 +192,9 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
           </div>
 
           {/* Totaal */}
-          <div className="flex items-center justify-between pt-4 border-t border-brand-border mb-5">
-            <span className="text-brand-ivory font-body text-sm">Totaal</span>
-            <span className="font-mono text-brand-gold text-2xl font-medium">
+          <div className="flex items-center justify-between pt-4 border-t border-brand-border mb-5 gap-2">
+            <span className="text-brand-ivory font-body text-sm flex-shrink-0">Totaal</span>
+            <span className="font-mono text-brand-gold text-2xl font-medium truncate">
               €{totaalprijs.toFixed(2).replace(".", ",")}
             </span>
           </div>
@@ -211,9 +208,9 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackKlik(product)}
-                className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-brand-border hover:border-brand-gold/40 transition-colors group"
+                className="flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border border-brand-border hover:border-brand-gold/40 transition-colors group"
               >
-                <span className="text-brand-muted text-xs font-body truncate group-hover:text-brand-ivory transition-colors">
+                <span className="text-brand-muted text-xs font-body truncate min-w-0 flex-1 group-hover:text-brand-ivory transition-colors">
                   {product.category.naam} bekijken
                 </span>
                 <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3 text-brand-gold flex-shrink-0">
