@@ -40,7 +40,7 @@ export function Stap3Budget() {
   return (
     <div className="animate-fade-up">
       <p className="font-mono text-brand-gold text-xs uppercase tracking-widest mb-3">
-        Stap 3 van 4
+        Stap 3 van 6
       </p>
       <h2 className="font-display text-3xl lg:text-4xl text-brand-ivory mb-2">
         Wat is je{" "}
@@ -54,16 +54,17 @@ export function Stap3Budget() {
         {BUDGETTEN.map((b) => (
           <div key={b.waarde} className="relative">
             <OptieKaart
-              label={b.label}
+              label={
+                <span className="flex items-center gap-2 flex-wrap">
+                  {b.label}
+                  <span className="text-brand-gold text-xs font-mono opacity-70">{b.indicatie}</span>
+                </span>
+              }
               omschrijving={b.omschrijving}
               icoon={b.icoon}
               geselecteerd={state.budgetklasse === b.waarde}
               onClick={() => setBudgetklasse(b.waarde)}
             />
-            {/* Prijs-badge */}
-            <span className="absolute top-4 right-12 font-mono text-xs text-brand-gold opacity-70">
-              {b.indicatie}
-            </span>
           </div>
         ))}
       </div>

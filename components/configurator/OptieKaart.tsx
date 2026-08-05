@@ -1,7 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 interface OptieKaartProps {
-  label: string;
+  label: ReactNode;
   omschrijving?: string;
   icoon?: string;
   geselecteerd: boolean;
@@ -26,12 +28,12 @@ export function OptieKaart({
     >
       <div className="flex items-start gap-4">
         {icoon && (
-          <span className="text-2xl leading-none mt-0.5">{icoon}</span>
+          <span className="text-2xl leading-none mt-0.5 flex-shrink-0">{icoon}</span>
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <span
-              className={`font-display font-semibold text-base transition-colors ${
+              className={`font-display font-semibold text-base transition-colors min-w-0 ${
                 geselecteerd ? "text-brand-gold" : "text-brand-ivory"
               }`}
             >
