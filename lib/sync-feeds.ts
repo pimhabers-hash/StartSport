@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie, detecteerGeslacht, schatNiveauEnFrequentie } from "@/lib/feed-import";
+import { haalAlleProducten } from "@/lib/product-fetch";
+import { matchSport } from "@/lib/sport-match";
 
 /**
  * Voert de synchronisatie van alle actieve feed-abonnementen uit.
@@ -19,6 +21,7 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
     .eq("actief", true);
 
   const { data: categorieen } = await supabase.from("categories").select("id, naam, slug");
+  const { data: sporten } = await supabase.from("sports").select("id, naam, slug");
   const resultaten: Record<string, string> = {};
 
   for (const abo of abonnementen ?? []) {
@@ -33,12 +36,9 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
       const bestandsnaamHint = abo.feed_url.toLowerCase().includes(".xlsx") ? "feed.xlsx" : "feed.csv";
       const { rijen: ruweRijen } = await parseFeedBuffer(buffer, bestandsnaamHint);
 
-      const { data: bestaandeProducten } = await supabase
-        .from("products")
-        .select("id, naam, ean")
-        .limit(100000);
-      const naamMap = new Map((bestaandeProducten ?? []).map((p) => [p.naam.toLowerCase().trim(), p.id]));
-      const eanMap = new Map((bestaandeProducten ?? []).filter((p) => p.ean).map((p) => [p.ean, p.id]));
+      const bestaandeProducten = await haalAlleProducten(supabase);
+      const naamMap = new Map(bestaandeProducten.map((p) => [p.naam.toLowerCase().trim(), p.id]));
+      const eanMap = new Map(bestaandeProducten.filter((p) => p.ean).map((p) => [p.ean, p.id]));
 
       let succes = 0, mislukt = 0, overgeslagen = 0;
       const voorbeeldenOvergeslagenCategorieen = new Set<string>();
@@ -95,10 +95,11 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
         } else {
           const budgetklasse = bepaalBudgetklasse(prijsGetal, Number(abo.grens_budget), Number(abo.grens_midden));
           const { niveau, frequentie } = schatNiveauEnFrequentie(budgetklasse);
+          const sport_id = abo.sport_id || matchSport(`${rij.naam} ${rij.categorie_ruw}`, sporten ?? []) || null;
           teInsertenen.push({
             naam: rij.naam,
             merk: rij.merk || null,
-            sport_id: abo.sport_id,
+            sport_id,
             category_id,
             provider_id: abo.provider_id,
             prijs: prijsGetal,

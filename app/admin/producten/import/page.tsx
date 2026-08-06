@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie, detecteerGeslacht, schatNiveauEnFrequentie, type RuweFeedRij, type KolomHerkenning } from "@/lib/feed-import";
+import { haalAlleProducten } from "@/lib/product-fetch";
+import { matchSport } from "@/lib/sport-match";
 
 
 export default function ImportPage() {
@@ -12,6 +14,7 @@ export default function ImportPage() {
   const [sportId, setSportId] = useState("");
   const [providerId, setProviderId] = useState("");
   const [sporten, setSporten] = useState<{ id: string; naam: string }[]>([]);
+  const [alleSporten, setAlleSporten] = useState<{ id: string; naam: string; slug: string }[]>([]);
   const [providers, setProviders] = useState<{ id: string; naam: string }[]>([]);
   const [categorieen, setCategorieen] = useState<{ id: string; naam: string; slug: string }[]>([]);
 
@@ -30,12 +33,14 @@ export default function ImportPage() {
 
   useEffect(() => {
     async function laadOpties() {
-      const [{ data: s }, { data: p }, { data: c }] = await Promise.all([
+      const [{ data: s }, { data: alleS }, { data: p }, { data: c }] = await Promise.all([
         supabase.from("sports").select("id, naam").eq("actief", true).order("volgorde"),
+        supabase.from("sports").select("id, naam, slug"),
         supabase.from("providers").select("id, naam").eq("actief", true),
         supabase.from("categories").select("id, naam, slug").order("volgorde"),
       ]);
       setSporten(s ?? []);
+      setAlleSporten(alleS ?? []);
       setProviders(p ?? []);
       setCategorieen(c ?? []);
     }
@@ -103,9 +108,9 @@ export default function ImportPage() {
     setImporteren(true);
     setFout(null);
 
-    const { data: bestaandeProducten } = await supabase.from("products").select("id, naam, ean").limit(100000);
-    const naamMap = new Map((bestaandeProducten ?? []).map((p) => [p.naam.toLowerCase().trim(), p.id]));
-    const eanMap = new Map((bestaandeProducten ?? []).filter((p) => p.ean).map((p) => [p.ean, p.id]));
+    const bestaandeProducten = await haalAlleProducten(supabase);
+    const naamMap = new Map(bestaandeProducten.map((p) => [p.naam.toLowerCase().trim(), p.id]));
+    const eanMap = new Map(bestaandeProducten.filter((p) => p.ean).map((p) => [p.ean, p.id]));
 
     let succes = 0, mislukt = 0, overgeslagen = 0;
 
@@ -128,10 +133,11 @@ export default function ImportPage() {
         if (error) mislukt++; else succes++;
       } else {
         const { niveau, frequentie } = schatNiveauEnFrequentie(budgetklasse);
+        const sport_id = sportId || matchSport(`${rij.naam} ${rij.categorie_ruw}`, alleSporten) || null;
         const { error } = await supabase.from("products").insert({
           naam: rij.naam,
           merk: rij.merk || null,
-          sport_id: sportId,
+          sport_id,
           category_id,
           provider_id: providerId || null,
           prijs: prijsGetal,
