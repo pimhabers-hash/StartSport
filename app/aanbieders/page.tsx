@@ -95,7 +95,7 @@ export default async function AanbiedersPage() {
           ) : (
             <div className="grid sm:grid-cols-2 gap-5">
               {zichtbareProviders.map((provider) => (
-                <div key={provider.id} className="card-surface rounded-2xl p-6">
+                <Link key={provider.id} href={`/aanbieders/${provider.slug}`} className="card-surface rounded-2xl p-6 block hover:border-brand-gold/30 transition-colors">
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <h2 className="font-display text-lg text-brand-ivory">{provider.naam}</h2>
                     <span className="px-2.5 py-1 rounded-full bg-brand-surface text-brand-muted text-xs font-mono flex-shrink-0">
@@ -105,13 +105,12 @@ export default async function AanbiedersPage() {
 
                   <div className="flex flex-wrap gap-2">
                     {provider.sporten.map((sport) => (
-                      <Link
+                      <span
                         key={sport.slug}
-                        href={`/sporten/${sport.slug}`}
-                        className="px-3 py-1 rounded-full border border-brand-gold/30 text-brand-gold text-xs font-mono hover:bg-brand-gold/10 transition-colors"
+                        className="px-3 py-1 rounded-full border border-brand-gold/30 text-brand-gold text-xs font-mono"
                       >
                         {sport.naam}
-                      </Link>
+                      </span>
                     ))}
                     {provider.heeftUniverseleProducten && (
                       <span className="px-3 py-1 rounded-full border border-brand-border text-brand-muted text-xs font-mono">
@@ -122,7 +121,7 @@ export default async function AanbiedersPage() {
                       <span className="text-brand-muted text-xs font-mono">Nog geen sport gekoppeld</span>
                     )}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

@@ -3,9 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();
-  const [{ data: sporten }, { data: artikelen }] = await Promise.all([
+  const [{ data: sporten }, { data: artikelen }, { data: providers }] = await Promise.all([
     supabase.from("sports").select("slug").eq("actief", true),
     supabase.from("articles").select("slug").eq("gepubliceerd", true),
+    supabase.from("providers").select("slug").eq("actief", true),
   ]);
 
   const basisPaginas: MetadataRoute.Sitemap = [
@@ -31,5 +32,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...basisPaginas, ...sportPaginas, ...artikelPaginas];
+  const aanbiederPaginas: MetadataRoute.Sitemap = (providers ?? []).map((p) => ({
+    url: `https://startsport.nl/aanbieders/${p.slug}`,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
+  return [...basisPaginas, ...sportPaginas, ...artikelPaginas, ...aanbiederPaginas];
 }
