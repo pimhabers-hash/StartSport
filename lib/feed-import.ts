@@ -5,7 +5,7 @@ const ALIASSEN: Record<string, string[]> = {
   merk:           ["merk", "brandname", "brand"],
   prijs:          ["prijs", "searchprice", "displayprice", "storeprice", "price", "baseprice"],
   affiliate_url:  ["affiliateurl", "awdeeplink", "merchantdeeplink", "deeplink", "url", "basketlink"],
-  afbeelding_url: ["afbeeldingurl", "merchantimageurl", "awimageurl", "largeimage", "afbeelding", "merchantthumburl"],
+  afbeelding_url: ["imagedefault", "afbeeldingurl", "merchantimageurl", "awimageurl", "largeimage", "afbeelding", "merchantthumburl"],
   ean:            ["ean", "productgtin", "gtin"],
   categorie_ruw:  ["categorie", "merchantcategory", "categoryname", "merchantproductcategorypath"],
 };
