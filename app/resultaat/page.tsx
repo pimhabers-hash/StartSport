@@ -46,7 +46,7 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
       categories ( id, naam, slug ),
       providers ( naam, logo_url )
     `)
-    .eq("sport_id", sport_id)
+    .or(`sport_id.eq.${sport_id},sport_id.is.null`)
     .eq("actief", true);
 
   if (!rawProducten || rawProducten.length === 0) {

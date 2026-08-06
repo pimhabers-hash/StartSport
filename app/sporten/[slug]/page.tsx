@@ -42,7 +42,7 @@ export default async function SportHubPage({ params }: PageProps) {
     supabase
       .from("products")
       .select("id, naam, merk, prijs, afbeelding_url, categories ( naam )")
-      .eq("sport_id", sport.id)
+      .or(`sport_id.eq.${sport.id},sport_id.is.null`)
       .eq("actief", true)
       .order("score", { ascending: false })
       .limit(6),
