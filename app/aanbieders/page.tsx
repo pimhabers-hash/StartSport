@@ -18,16 +18,42 @@ interface ProviderInfo {
   heeftUniverseleProducten: boolean;
 }
 
-export default async function AanbiedersPage() {
-  const supabase = await createClient();
+type ProductRij = { provider_id: string | null; sport_id: string | null; sports: { naam: string; slug: string } | { naam: string; slug: string }[] | null };
 
-  const [{ data: providers }, { data: producten }] = await Promise.all([
-    supabase.from("providers").select("id, naam, slug, logo_url").eq("actief", true).order("naam"),
-    supabase
+const PAGINA_GROOTTE = 1000;
+
+/**
+ * Haalt ALLE actieve producten met provider_id op, gepagineerd in stappen
+ * van 1000 rijen. Supabase begrenst een enkele select() standaard op 1000
+ * rijen, dus zonder paginering zag deze pagina alleen de producten van de
+ * grootste aanbieder — de rest kwam nooit voorbij de eerste 1000 rijen.
+ */
+async function haalAlleProviderProducten(supabase: Awaited<ReturnType<typeof createClient>>): Promise<ProductRij[]> {
+  const alleProducten: ProductRij[] = [];
+
+  for (let vanaf = 0; ; vanaf += PAGINA_GROOTTE) {
+    const { data, error } = await supabase
       .from("products")
       .select("provider_id, sport_id, sports ( naam, slug )")
       .eq("actief", true)
-      .not("provider_id", "is", null),
+      .not("provider_id", "is", null)
+      .range(vanaf, vanaf + PAGINA_GROOTTE - 1);
+
+    if (error || !data || data.length === 0) break;
+
+    alleProducten.push(...data);
+    if (data.length < PAGINA_GROOTTE) break;
+  }
+
+  return alleProducten;
+}
+
+export default async function AanbiedersPage() {
+  const supabase = await createClient();
+
+  const [{ data: providers }, producten] = await Promise.all([
+    supabase.from("providers").select("id, naam, slug, logo_url").eq("actief", true).order("naam"),
+    haalAlleProviderProducten(supabase),
   ]);
 
   // Aggregeren: per aanbieder welke sporten ze bedienen en hoeveel producten

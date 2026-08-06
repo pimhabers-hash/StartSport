@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { FormVeld } from "@/components/admin/FormVeld";
 
-const VOORBEELD_ICONEN = ["🏅", "🎾", "👟", "🏋️", "🏐", "⛳", "🏓", "🤺", "⚽", "🏀", "🚴", "🏊", "🥊", "🧗", "⛷️", "🏂"];
+const VOORBEELD_ICONEN = [
+  "🏅", "🎾", "👟", "🏋️", "🏐", "⛳", "🏓", "🤺", "⚽", "🏀", "🚴", "🏊", "🥊", "🧗", "⛷️", "🏂",
+  "🏸", "🥏", "🏒", "🏑", "🥍", "🏈", "🏉", "⛸️", "🛹", "🏄", "🚣", "🧘", "🤸", "🎳", "🎯", "🏹",
+  "🥋", "🚵", "⚾", "🥎", "🏇", "🤾", "🏃", "🛼",
+];
 
 export default function NieuweSportPage() {
   const router = useRouter();
