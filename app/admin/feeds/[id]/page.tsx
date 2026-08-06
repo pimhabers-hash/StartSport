@@ -36,7 +36,7 @@ export default function BewerkFeedPage() {
       if (feed) {
         setNaam(feed.naam);
         setFeedUrl(feed.feed_url);
-        setSportId(feed.sport_id);
+        setSportId(feed.sport_id ?? "");
         setProviderId(feed.provider_id ?? "");
         setGrensBudget(String(feed.grens_budget));
         setGrensMidden(String(feed.grens_midden));
@@ -51,15 +51,15 @@ export default function BewerkFeedPage() {
   }, [id]);
 
   async function handleOpslaan() {
-    if (!naam || !feedUrl || !sportId) {
-      setFout("Naam, feed-URL en sport zijn verplicht.");
+    if (!naam || !feedUrl) {
+      setFout("Naam en feed-URL zijn verplicht.");
       return;
     }
     setOpslaan(true); setFout(null);
 
     const { error } = await supabase.from("feed_subscriptions").update({
       naam, feed_url: feedUrl,
-      sport_id: sportId,
+      sport_id: sportId || null,
       provider_id: providerId || null,
       grens_budget: parseFloat(grensBudget),
       grens_midden: parseFloat(grensMidden),
@@ -82,7 +82,15 @@ export default function BewerkFeedPage() {
       <div className="card-surface rounded-2xl p-8 space-y-5">
         <FormVeld label="Naam" naam="naam" verplicht waarde={naam} onChange={(v) => setNaam(v as string)} />
         <FormVeld label="Feed URL" naam="feedUrl" type="url" verplicht waarde={feedUrl} onChange={(v) => setFeedUrl(v as string)} />
-        <FormVeld label="Sport" naam="sport" type="select" verplicht waarde={sportId} onChange={(v) => setSportId(v as string)} opties={sporten} />
+        <FormVeld
+          label="Sport (optioneel)"
+          naam="sport"
+          type="select"
+          waarde={sportId}
+          onChange={(v) => setSportId(v as string)}
+          opties={sporten}
+          hulptekst="Laat leeg voor universele producten — die worden dan bij elke sport getoond"
+        />
         <FormVeld label="Aanbieder" naam="provider" type="select" waarde={providerId} onChange={(v) => setProviderId(v as string)} opties={providers} />
         <div className="grid grid-cols-2 gap-4">
           <FormVeld label="Onder = Budget" naam="grensBudget" type="number" waarde={grensBudget} onChange={(v) => setGrensBudget(v as string)} />

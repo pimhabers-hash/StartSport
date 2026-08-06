@@ -33,15 +33,15 @@ export default function NieuweFeedPage() {
   }, []);
 
   async function handleOpslaan() {
-    if (!naam || !feedUrl || !sportId) {
-      setFout("Naam, feed-URL en sport zijn verplicht.");
+    if (!naam || !feedUrl) {
+      setFout("Naam en feed-URL zijn verplicht.");
       return;
     }
     setOpslaan(true); setFout(null);
 
     const { error } = await supabase.from("feed_subscriptions").insert({
       naam, feed_url: feedUrl,
-      sport_id: sportId,
+      sport_id: sportId || null,
       provider_id: providerId || null,
       grens_budget: parseFloat(grensBudget),
       grens_midden: parseFloat(grensMidden),
@@ -71,7 +71,15 @@ export default function NieuweFeedPage() {
           placeholder="https://productdata.awin.com/datafeed/download/..."
           hulptekst="De directe download-URL uit je Awin/Daisycon datafeed-overzicht (kolom 'URL')"
         />
-        <FormVeld label="Sport" naam="sport" type="select" verplicht waarde={sportId} onChange={(v) => setSportId(v as string)} opties={sporten} />
+        <FormVeld
+          label="Sport (optioneel)"
+          naam="sport"
+          type="select"
+          waarde={sportId}
+          onChange={(v) => setSportId(v as string)}
+          opties={sporten}
+          hulptekst="Laat leeg voor universele producten (bijv. supplementen) — die worden dan bij elke sport getoond in plaats van gekoppeld aan één specifieke sport"
+        />
         <FormVeld label="Aanbieder" naam="provider" type="select" waarde={providerId} onChange={(v) => setProviderId(v as string)} opties={providers} />
         <div className="grid grid-cols-2 gap-4">
           <FormVeld label="Onder = Budget" naam="grensBudget" type="number" waarde={grensBudget} onChange={(v) => setGrensBudget(v as string)} />

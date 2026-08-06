@@ -62,20 +62,19 @@ export default function FeedsPage() {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
           <h1 className="font-display text-3xl text-brand-ivory mb-1">Automatische feeds</h1>
           <p className="text-brand-muted text-sm font-body">
             Draait elke nacht om 03:00 automatisch — geen handmatig werk meer nodig.
           </p>
         </div>
-        <Link href="/admin/feeds/nieuw" className="px-5 py-2.5 rounded-xl gold-shimmer text-brand-black text-sm font-medium">
+        <Link href="/admin/feeds/nieuw" className="px-5 py-2.5 rounded-xl gold-shimmer text-brand-black text-sm font-medium flex-shrink-0">
           ＋ Feed toevoegen
         </Link>
       </div>
 
-      {/* Handmatig nu synchroniseren */}
-      <div className="card-surface rounded-2xl p-6 mb-6 flex items-center justify-between">
+      <div className="card-surface rounded-2xl p-6 mb-6 flex items-center justify-between flex-wrap gap-4">
         <div>
           <p className="text-brand-ivory font-body text-sm mb-1">Niet wachten tot vannacht?</p>
           <p className="text-brand-muted text-xs font-mono">Start de synchronisatie nu handmatig.</p>
@@ -83,20 +82,19 @@ export default function FeedsPage() {
         <button
           onClick={handleHandmatigSyncen}
           disabled={syncBezig}
-          className="px-5 py-2.5 rounded-xl border border-brand-gold/40 text-brand-gold text-sm font-medium hover:bg-brand-gold/5 transition-colors disabled:opacity-40"
+          className="px-5 py-2.5 rounded-xl border border-brand-gold/40 text-brand-gold text-sm font-medium hover:bg-brand-gold/5 transition-colors disabled:opacity-40 flex-shrink-0"
         >
           {syncBezig ? "Bezig..." : "Nu synchroniseren"}
         </button>
       </div>
-      {syncResultaat && <p className="text-brand-muted text-xs font-mono mb-6">{syncResultaat}</p>}
+      {syncResultaat && <p className="text-brand-muted text-xs font-mono mb-6 break-words">{syncResultaat}</p>}
 
-      {/* Lijst */}
-      <div className="card-surface rounded-2xl overflow-hidden">
+      <div className="card-surface rounded-2xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-brand-border">
               {["Feed", "Sport", "Laatste sync", "Resultaat", "Status", ""].map((h) => (
-                <th key={h} className="text-left px-5 py-3 text-brand-muted text-xs font-mono uppercase tracking-widest">{h}</th>
+                <th key={h} className="text-left px-5 py-3 text-brand-muted text-xs font-mono uppercase tracking-widest whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -105,13 +103,17 @@ export default function FeedsPage() {
               const sportNaam = Array.isArray(f.sports) ? f.sports[0]?.naam : f.sports?.naam;
               return (
                 <tr key={f.id} className="border-b border-brand-border/50">
-                  <td className="px-5 py-4 text-brand-ivory font-body">
+                  <td className="px-5 py-4 text-brand-ivory font-body whitespace-nowrap">
                     <Link href={`/admin/feeds/${f.id}`} className="hover:text-brand-gold transition-colors">
                       {f.naam}
                     </Link>
                   </td>
-                  <td className="px-5 py-4 text-brand-muted font-mono text-xs">{sportNaam ?? "—"}</td>
-                  <td className="px-5 py-4 text-brand-muted font-mono text-xs">
+                  <td className="px-5 py-4 text-brand-muted font-mono text-xs whitespace-nowrap">
+                    {sportNaam ?? (
+                      <span className="px-2 py-0.5 rounded-full bg-brand-gold/10 text-brand-gold text-[10px]">Alle sporten</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-4 text-brand-muted font-mono text-xs whitespace-nowrap">
                     {f.laatste_sync ? new Date(f.laatste_sync).toLocaleString("nl-NL") : "Nog niet gesynchroniseerd"}
                   </td>
                   <td className="px-5 py-4 text-brand-muted font-mono text-xs max-w-md break-words">{f.laatste_resultaat ?? "—"}</td>

@@ -18,12 +18,12 @@ export function Footer() {
             <Link href="/sporten" className="hover:text-brand-ivory transition-colors">Sporten</Link>
             <Link href="/configurator" className="hover:text-brand-ivory transition-colors">Configurator</Link>
             <Link href="/advies" className="hover:text-brand-ivory transition-colors">Koopgidsen</Link>
+            <Link href="/aanbieders" className="hover:text-brand-ivory transition-colors">Aanbieders</Link>
             <Link href="/over-ons" className="hover:text-brand-ivory transition-colors">Over ons</Link>
             <Link href="/admin" className="hover:text-brand-ivory transition-colors">Admin</Link>
           </nav>
         </div>
 
-        {/* Juridische links */}
         <div className="border-t border-brand-border pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <nav className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-brand-muted font-mono">
             <Link href="/privacy" className="hover:text-brand-gold transition-colors">Privacy</Link>
