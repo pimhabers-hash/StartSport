@@ -77,27 +77,56 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
             {producten?.length ?? 0} producten — bekijk direct, zonder de configurator te gebruiken.
           </p>
 
-          <div className="flex flex-wrap gap-3 mb-8">
-            <Link
-              href={`/aanbieders/${slug}`}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-                !sportFilter && !categorieFilter ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
-              }`}
-            >
-              Alles
-            </Link>
-            {(sporten ?? []).map((s) => (
-              <Link
-                key={s.slug}
-                href={`/aanbieders/${slug}?sport=${s.slug}`}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-                  sportFilter === s.slug ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
-                }`}
-              >
-                {s.naam}
-              </Link>
-            ))}
-          </div>
+          {/* Filter-link bouwt de query-string op met het andere actieve
+              filter behouden, zodat sport + categorie te combineren zijn. */}
+          {(() => {
+            function filterHref(volgendeSport?: string, volgendeCategorie?: string) {
+              const params = new URLSearchParams();
+              if (volgendeSport) params.set("sport", volgendeSport);
+              if (volgendeCategorie) params.set("categorie", volgendeCategorie);
+              const query = params.toString();
+              return `/aanbieders/${slug}${query ? `?${query}` : ""}`;
+            }
+
+            return (
+              <div className="space-y-3 mb-8">
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href={filterHref()}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+                      !sportFilter && !categorieFilter ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
+                    }`}
+                  >
+                    Alles
+                  </Link>
+                  {(sporten ?? []).map((s) => (
+                    <Link
+                      key={s.slug}
+                      href={filterHref(sportFilter === s.slug ? undefined : s.slug, categorieFilter)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+                        sportFilter === s.slug ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
+                      }`}
+                    >
+                      {s.naam}
+                    </Link>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {(categorieen ?? []).map((c) => (
+                    <Link
+                      key={c.slug}
+                      href={filterHref(sportFilter, categorieFilter === c.slug ? undefined : c.slug)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+                        categorieFilter === c.slug ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
+                      }`}
+                    >
+                      {c.naam}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {producten && producten.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">

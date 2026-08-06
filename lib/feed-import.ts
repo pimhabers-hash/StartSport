@@ -70,6 +70,40 @@ function vindKolom(headers: string[], veld: string): { index: number; header: st
   return { index: -1, header: null };
 }
 
+const AFBEELDING_EXTENSIE = /\.(jpe?g|png|webp|gif)(\?|;|$)/i;
+
+/**
+ * Sommige feeds (bijv. Sportsprofi) leveren voor de afbeeldingskolom geen
+ * directe URL, maar een trackingpixel-redirect met de échte afbeelding
+ * verstopt in een query-parameter, en soms een niet-ingevulde
+ * "!!TIME_STAMP!!"-macro erin. Zo'n URL rechtstreeks als <img src>
+ * gebruiken geeft een kapotte afbeelding. Deze functie herkent dat
+ * patroon en probeert de echte afbeeldings-URL uit de query-parameters
+ * te halen; lukt dat niet, dan geven we niets terug (liever geen
+ * afbeelding tonen dan een kapotte).
+ */
+function opschonenAfbeeldingUrl(ruweUrl: string): string {
+  if (!ruweUrl) return ruweUrl;
+  if (!ruweUrl.includes("!!TIME_STAMP!!") && AFBEELDING_EXTENSIE.test(ruweUrl)) {
+    return ruweUrl; // ziet er al uit als een directe afbeeldings-URL
+  }
+
+  try {
+    const url = new URL(ruweUrl);
+    for (const waarde of url.searchParams.values()) {
+      if (/^https?:\/\//i.test(waarde) && AFBEELDING_EXTENSIE.test(waarde)) {
+        // Sommige feeds plakken meerdere URL's achter elkaar gescheiden
+        // door "; " (bijv. Sportsprofi's trg-parameter) — pak de eerste.
+        return waarde.split(/;\s*/)[0];
+      }
+    }
+  } catch {
+    // ruweUrl was geen geldige URL — val door naar "geen afbeelding"
+  }
+
+  return "";
+}
+
 function rijenUitTabel(rows: unknown[][]): { rijen: RuweFeedRij[]; herkenning: KolomHerkenning[]; ruweHeaders: string[] } {
   if (rows.length < 2) return { rijen: [], herkenning: [], ruweHeaders: [] };
   const headers = rows[0].map((h) => String(h ?? ""));
@@ -94,7 +128,7 @@ function rijenUitTabel(rows: unknown[][]): { rijen: RuweFeedRij[]; herkenning: K
       merk: lees(kolomIndex.merk),
       prijs: lees(kolomIndex.prijs),
       affiliate_url: lees(kolomIndex.affiliate_url),
-      afbeelding_url: lees(kolomIndex.afbeelding_url),
+      afbeelding_url: opschonenAfbeeldingUrl(lees(kolomIndex.afbeelding_url)),
       ean: lees(kolomIndex.ean),
       categorie_ruw: lees(kolomIndex.categorie_ruw),
     });
