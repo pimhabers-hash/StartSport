@@ -40,7 +40,7 @@ const config: Config = {
         },
       },
       animation: {
-        "fade-up":  "fade-up 0.6s ease-out forwards",
+        "fade-up":  "fade-up 0.6s ease-out both",
         "check-in": "check-in 0.35s ease-out forwards",
         "shimmer":  "shimmer 3s linear infinite",
       },

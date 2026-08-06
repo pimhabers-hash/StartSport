@@ -67,12 +67,12 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
 
       {/* Linkerkant: categorie-secties met suggesties */}
       <div className="space-y-10 min-w-0">
-        {categorieOpties.map((c) => {
+        {categorieOpties.map((c, i) => {
           const actieveId = selectie[c.category.id];
           const isUitgevinkt = uitgevinkt.has(c.category.id);
 
           return (
-            <div key={c.category.id}>
+            <div key={c.category.id} className="animate-fade-up" style={{ animationDelay: `${i * 70}ms` }}>
               {/* Sectie-header per categorie — wrapt netjes op smalle schermen */}
               <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2 mb-4">
                 <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -157,7 +157,7 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
       </div>
 
       {/* Rechterkant: sticky pakket-overzicht */}
-      <div className="lg:sticky lg:top-24 min-w-0">
+      <div className="lg:sticky lg:top-24 min-w-0 animate-fade-up" style={{ animationDelay: "150ms" }}>
         <div className="card-surface rounded-2xl p-6">
           <h3 className="font-display text-lg text-brand-ivory mb-1">Jouw pakket</h3>
           <p className="text-brand-muted text-xs font-mono mb-5">
@@ -194,7 +194,7 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
           {/* Totaal */}
           <div className="flex items-center justify-between pt-4 border-t border-brand-border mb-5 gap-2">
             <span className="text-brand-ivory font-body text-sm flex-shrink-0">Totaal</span>
-            <span className="font-mono text-brand-gold text-2xl font-medium truncate">
+            <span key={totaalprijs} className="font-mono text-brand-gold text-2xl font-medium truncate animate-check-in">
               €{totaalprijs.toFixed(2).replace(".", ",")}
             </span>
           </div>

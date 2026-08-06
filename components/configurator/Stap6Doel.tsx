@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OptieKaart } from "./OptieKaart";
 import { useWizard, type Doel, type LeeftijdCategorie, type Geslacht } from "./WizardContext";
@@ -27,9 +28,10 @@ const GESLACHTEN: { waarde: Geslacht; label: string }[] = [
 export function Stap6Doel() {
   const { state, setDoel, setLeeftijd, setGeslacht, isCompleet } = useWizard();
   const router = useRouter();
+  const [samenstellen, setSamenstellen] = useState(false);
 
   function handleBereken() {
-    if (!isCompleet || !state.sport) return;
+    if (!isCompleet || !state.sport || samenstellen) return;
 
     const params = new URLSearchParams({
       sport_id:     state.sport.id,
@@ -44,7 +46,11 @@ export function Stap6Doel() {
       ...(state.geslacht  ? { geslacht:  state.geslacht }  : {}),
     });
 
-    router.push(`/resultaat?${params.toString()}`);
+    // Korte anticipatie vóór de navigatie — laat het voelen alsof we
+    // het pakket voor de klant samenstellen, in plaats van een instant
+    // page-jump zonder enige overgang.
+    setSamenstellen(true);
+    setTimeout(() => router.push(`/resultaat?${params.toString()}`), 900);
   }
 
   return (
@@ -124,16 +130,23 @@ export function Stap6Doel() {
       {/* Submit */}
       <button
         onClick={handleBereken}
-        disabled={!isCompleet}
+        disabled={!isCompleet || samenstellen}
         className={`w-full py-4 rounded-xl font-body font-medium text-sm tracking-wide transition-all duration-300 ${
           isCompleet
             ? "gold-shimmer text-brand-black hover:opacity-90 shadow-lg shadow-brand-gold/20"
             : "bg-brand-surface text-brand-muted cursor-not-allowed border border-brand-border"
         }`}
       >
-        {isCompleet
-          ? "Bereken mijn sportpakket →"
-          : "Kies eerst je doel om door te gaan"}
+        {samenstellen ? (
+          <span className="flex items-center justify-center gap-2">
+            <span className="w-4 h-4 rounded-full border-2 border-brand-black/30 border-t-brand-black animate-spin" />
+            Jouw pakket wordt samengesteld...
+          </span>
+        ) : isCompleet ? (
+          "Bereken mijn sportpakket →"
+        ) : (
+          "Kies eerst je doel om door te gaan"
+        )}
       </button>
     </div>
   );
