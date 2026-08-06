@@ -26,6 +26,30 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
 
   for (const abo of abonnementen ?? []) {
     try {
+      // Claim dit abonnement atomisch via een conditionele update op
+      // laatste_sync, vóórdat we de feed downloaden/verwerken. Voorkomt
+      // dat overlappende aanroepen (bijv. een paar keer snel achter
+      // elkaar op "Nu synchroniseren" klikken, of de nachtelijke cron
+      // die samenvalt met een handmatige sync) dezelfde feed dubbel
+      // verwerken — beide zouden anders onafhankelijk van elkaar
+      // dezelfde "bestaande producten"-snapshot pakken vóórdat de ander
+      // iets heeft weggeschreven, en zo dezelfde rijen dubbel invoegen.
+      // Alleen de aanroep die de update daadwerkelijk raakt (0 rijen
+      // als een ander proces net won) gaat door met verwerken.
+      const nu = new Date();
+      const claimDrempel = new Date(nu.getTime() - 5 * 60 * 1000).toISOString();
+      const { data: geclaimd } = await supabase
+        .from("feed_subscriptions")
+        .update({ laatste_sync: nu.toISOString() })
+        .eq("id", abo.id)
+        .or(`laatste_sync.is.null,laatste_sync.lt.${claimDrempel}`)
+        .select("id");
+
+      if (!geclaimd || geclaimd.length === 0) {
+        resultaten[abo.naam] = "Overgeslagen: wordt al door een andere aanroep gesynchroniseerd";
+        continue;
+      }
+
       const response = await fetch(abo.feed_url);
       if (!response.ok) {
         resultaten[abo.naam] = `Feed niet bereikbaar (${response.status})`;
