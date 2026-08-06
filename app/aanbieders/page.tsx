@@ -27,6 +27,9 @@ const PAGINA_GROOTTE = 1000;
  * van 1000 rijen. Supabase begrenst een enkele select() standaard op 1000
  * rijen, dus zonder paginering zag deze pagina alleen de producten van de
  * grootste aanbieder — de rest kwam nooit voorbij de eerste 1000 rijen.
+ * De .order("id") is nodig omdat .range() zonder vaste sortering geen
+ * garantie geeft dat pagina's dezelfde rijvolgorde gebruiken, waardoor
+ * rijen tussen pagina's kunnen ontbreken.
  */
 async function haalAlleProviderProducten(supabase: Awaited<ReturnType<typeof createClient>>): Promise<ProductRij[]> {
   const alleProducten: ProductRij[] = [];
@@ -37,6 +40,7 @@ async function haalAlleProviderProducten(supabase: Awaited<ReturnType<typeof cre
       .select("provider_id, sport_id, sports ( naam, slug )")
       .eq("actief", true)
       .not("provider_id", "is", null)
+      .order("id")
       .range(vanaf, vanaf + PAGINA_GROOTTE - 1);
 
     if (error || !data || data.length === 0) break;

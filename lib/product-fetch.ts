@@ -11,6 +11,12 @@ const PAGINA_GROOTTE = 1000;
  * gaf bij meer dan 1000 producten stilzwijgend een onvolledige lijst
  * terug — met als gevolg dubbele inserts i.p.v. updates bij feed-sync
  * en CSV-import.
+ *
+ * De .order("id") hieronder is niet optioneel: .range() zonder vaste
+ * sortering geeft geen garantie dat opeenvolgende pagina's dezelfde
+ * rijvolgorde gebruiken, waardoor rijen tussen pagina's kunnen "vallen"
+ * en zo alsnog stilzwijgend ontbreken — met exact hetzelfde gevolg
+ * (dubbele inserts) als de oorspronkelijke bug hierboven.
  */
 export async function haalAlleProducten(supabase: SupabaseClient): Promise<BestaandProduct[]> {
   const alleProducten: BestaandProduct[] = [];
@@ -19,6 +25,7 @@ export async function haalAlleProducten(supabase: SupabaseClient): Promise<Besta
     const { data, error } = await supabase
       .from("products")
       .select("id, naam, ean")
+      .order("id")
       .range(vanaf, vanaf + PAGINA_GROOTTE - 1);
 
     if (error || !data || data.length === 0) break;
