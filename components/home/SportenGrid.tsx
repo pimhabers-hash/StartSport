@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 export async function SportenGrid() {
   const supabase = await createClient();
@@ -29,32 +30,33 @@ export async function SportenGrid() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {sporten.map((sport) => (
-          <Link
-            key={sport.id}
-            href={`/configurator?sport=${sport.slug}`}
-            className="group card-surface rounded-2xl p-6 flex flex-col gap-4 hover:border-brand-gold/40 hover:bg-brand-card/80 transition-all duration-300"
-          >
-            <div className="w-12 h-12 rounded-xl bg-brand-surface flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
-              {sport.icoon ?? "🏅"}
-            </div>
-            <div>
-              <h3 className="font-display font-semibold text-brand-ivory text-lg leading-tight group-hover:text-gold-gradient transition-colors">
-                {sport.naam}
-              </h3>
-              {sport.beschrijving && (
-                <p className="text-brand-muted text-sm mt-1 leading-snug line-clamp-2">
-                  {sport.beschrijving}
-                </p>
-              )}
-            </div>
-            <div className="mt-auto flex items-center gap-1 text-brand-gold text-xs font-mono opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              Start configurator
-              <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
-                <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </Link>
+        {sporten.map((sport, i) => (
+          <ScrollReveal key={sport.id} delayMs={Math.min(i, 8) * 60}>
+            <Link
+              href={`/configurator?sport=${sport.slug}`}
+              className="group card-surface rounded-2xl p-6 flex flex-col gap-4 h-full hover:border-brand-gold/40 hover:bg-brand-card/80 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 transition-all duration-300"
+            >
+              <div className="w-12 h-12 rounded-xl bg-brand-surface flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300">
+                {sport.icoon ?? "🏅"}
+              </div>
+              <div>
+                <h3 className="font-display font-semibold text-brand-ivory text-lg leading-tight group-hover:text-gold-gradient transition-colors">
+                  {sport.naam}
+                </h3>
+                {sport.beschrijving && (
+                  <p className="text-brand-muted text-sm mt-1 leading-snug line-clamp-2">
+                    {sport.beschrijving}
+                  </p>
+                )}
+              </div>
+              <div className="mt-auto flex items-center gap-1 text-brand-gold text-xs font-mono opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                Start configurator
+                <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
+                  <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </Link>
+          </ScrollReveal>
         ))}
       </div>
     </section>

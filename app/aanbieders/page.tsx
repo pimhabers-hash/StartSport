@@ -125,7 +125,7 @@ export default async function AanbiedersPage() {
           ) : (
             <div className="grid sm:grid-cols-2 gap-5">
               {zichtbareProviders.map((provider) => (
-                <Link key={provider.id} href={`/aanbieders/${provider.slug}`} className="card-surface rounded-2xl p-6 block hover:border-brand-gold/30 transition-colors">
+                <Link key={provider.id} href={`/aanbieders/${provider.slug}`} className="card-surface rounded-2xl p-6 block hover:border-brand-gold/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 transition-all duration-300">
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <h2 className="font-display text-lg text-brand-ivory">{provider.naam}</h2>
                     <span className="px-2.5 py-1 rounded-full bg-brand-surface text-brand-muted text-xs font-mono flex-shrink-0">

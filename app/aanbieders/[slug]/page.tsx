@@ -141,7 +141,7 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                     href={product.affiliate_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="card-surface rounded-2xl overflow-hidden group hover:border-brand-gold/30 transition-colors"
+                    className="card-surface rounded-2xl overflow-hidden group hover:border-brand-gold/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 transition-all duration-300"
                   >
                     <div className="relative h-40 bg-brand-surface flex items-center justify-center overflow-hidden">
                       <ProductAfbeelding

@@ -40,7 +40,7 @@ export default async function SportenOverzichtPage() {
               <Link
                 key={sport.id}
                 href={`/sporten/${sport.slug}`}
-                className="card-surface rounded-2xl p-6 hover:border-brand-gold/30 transition-colors group"
+                className="card-surface rounded-2xl p-6 hover:border-brand-gold/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 transition-all duration-300 group"
               >
                 <span className="text-3xl mb-3 inline-block">{sport.icoon ?? "🏅"}</span>
                 <h2 className="font-display text-xl text-brand-ivory mb-2 group-hover:text-gold-gradient transition-colors">

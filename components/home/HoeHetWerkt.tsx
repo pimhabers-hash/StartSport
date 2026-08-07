@@ -1,3 +1,5 @@
+import { ScrollReveal } from "@/components/ScrollReveal";
+
 const STAPPEN = [
   {
     nr: "01",
@@ -25,7 +27,7 @@ export function HoeHetWerkt() {
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
-        <div className="mb-16 max-w-xl">
+        <ScrollReveal className="mb-16 max-w-xl">
           <p className="font-mono text-brand-gold text-xs uppercase tracking-[0.2em] mb-3">
             Hoe het werkt
           </p>
@@ -34,14 +36,15 @@ export function HoeHetWerkt() {
             <em className="not-italic text-gold-gradient font-light">klaar</em>{" "}
             in drie stappen
           </h2>
-        </div>
+        </ScrollReveal>
 
         {/* Stappen */}
         <div className="grid md:grid-cols-3 gap-px bg-brand-border rounded-2xl overflow-hidden">
-          {STAPPEN.map((stap) => (
-            <div
+          {STAPPEN.map((stap, i) => (
+            <ScrollReveal
               key={stap.nr}
-              className="bg-brand-black p-8 lg:p-10 flex flex-col gap-6"
+              delayMs={i * 120}
+              className="bg-brand-black p-8 lg:p-10 flex flex-col gap-6 transition-colors duration-300 hover:bg-brand-surface/60"
             >
               {/* Nummer */}
               <span className="font-mono text-brand-gold text-4xl font-medium leading-none">
@@ -60,7 +63,7 @@ export function HoeHetWerkt() {
                   {stap.omschrijving}
                 </p>
               </div>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
 

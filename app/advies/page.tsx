@@ -34,7 +34,7 @@ export default async function AdviesOverzichtPage() {
                 <Link
                   key={artikel.id}
                   href={`/advies/${artikel.slug}`}
-                  className="card-surface rounded-2xl p-6 hover:border-brand-gold/30 transition-colors group"
+                  className="card-surface rounded-2xl p-6 hover:border-brand-gold/30 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 transition-all duration-300 group"
                 >
                   {artikel.sports && (
                     <span className="text-brand-gold text-xs font-mono uppercase tracking-widest">
