@@ -16,20 +16,22 @@ interface PromoPlayerProps {
   sporten: SportData[];
   sportNaam: string;
   producten: ProductData[];
+  aantalSporten: number;
 }
 
 const SCENE_DUUR = {
+  probleem: 2200,
   hero: 4000,
   sporten: 3800,
   configurator: 4200,
   resultaat: 5000,
-  outro: 3200,
+  outro: 3600,
 };
 
 type Scene = keyof typeof SCENE_DUUR;
-const VOLGORDE: Scene[] = ["hero", "sporten", "configurator", "resultaat", "outro"];
+const VOLGORDE: Scene[] = ["probleem", "hero", "sporten", "configurator", "resultaat", "outro"];
 
-export function PromoPlayer({ sporten, sportNaam, producten }: PromoPlayerProps) {
+export function PromoPlayer({ sporten, sportNaam, producten, aantalSporten }: PromoPlayerProps) {
   const [sceneIndex, setSceneIndex] = useState(0);
   const [zichtbaar, setZichtbaar] = useState(true);
   const huidigeScene = VOLGORDE[sceneIndex];
@@ -93,15 +95,28 @@ export function PromoPlayer({ sporten, sportNaam, producten }: PromoPlayerProps)
             transform: zichtbaar ? "scale(1)" : "scale(0.98)",
           }}
         >
+          {huidigeScene === "probleem" && <SceneProbleem />}
           {huidigeScene === "hero" && <SceneHero />}
           {huidigeScene === "sporten" && <SceneSporten sporten={sporten} />}
           {huidigeScene === "configurator" && <SceneConfigurator sportNaam={sportNaam} />}
           {huidigeScene === "resultaat" && (
             <SceneResultaat sportNaam={sportNaam} producten={producten} totaalprijs={totaalprijs} />
           )}
-          {huidigeScene === "outro" && <SceneOutro />}
+          {huidigeScene === "outro" && <SceneOutro aantalSporten={aantalSporten} />}
         </div>
       </main>
+    </div>
+  );
+}
+
+function SceneProbleem() {
+  return (
+    <div className="text-center animate-fade-up">
+      <p className="font-display text-3xl md:text-4xl text-brand-muted leading-snug">
+        Tientallen webshops.
+        <br />
+        <span className="text-brand-ivory">Duizenden opties.</span>
+      </p>
     </div>
   );
 }
@@ -169,7 +184,7 @@ function SceneConfigurator({ sportNaam }: { sportNaam: string }) {
         {niveaus.map((n, i) => (
           <div
             key={n}
-            className={`rounded-xl p-5 border transition-all duration-200 ${
+            className={`relative overflow-visible rounded-xl p-5 border transition-all duration-200 ${
               i === 0
                 ? "border-brand-gold bg-brand-gold/5 shadow-lg shadow-brand-gold/10 animate-glow-pulse"
                 : "border-brand-border bg-brand-card"
@@ -179,13 +194,32 @@ function SceneConfigurator({ sportNaam }: { sportNaam: string }) {
               <span className={`font-display font-semibold ${i === 0 ? "text-brand-gold" : "text-brand-ivory"}`}>
                 {n}
               </span>
-              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+              <div className={`relative w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                 i === 0 ? "border-brand-gold bg-brand-gold" : "border-brand-border"
               }`}>
                 {i === 0 && (
-                  <svg viewBox="0 0 10 10" fill="none" className="w-2.5 h-2.5">
-                    <path d="M2 5.5L4.5 8L8.5 3" stroke="#0A0B0D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <>
+                    <svg viewBox="0 0 10 10" fill="none" className="w-2.5 h-2.5">
+                      <path d="M2 5.5L4.5 8L8.5 3" stroke="#0A0B0D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {/* Ripple + cursor die "klikt" — laat de scène als een
+                        echte, live interactie aanvoelen i.p.v. een dia. */}
+                    <span className="absolute inset-0 rounded-full bg-brand-gold animate-ripple" style={{ animationDelay: "620ms" }} />
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="absolute w-6 h-6 -right-3 -bottom-3 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] animate-cursor-tik"
+                      style={{ transformOrigin: "20% 15%" }}
+                    >
+                      <path
+                        d="M5 3l3.5 16.5 2.2-6.6 6.6-2.2L5 3z"
+                        fill="#F2EFE9"
+                        stroke="#0A0B0D"
+                        strokeWidth="1"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </>
                 )}
               </div>
             </div>
@@ -253,7 +287,7 @@ function SceneResultaat({
   );
 }
 
-function SceneOutro() {
+function SceneOutro({ aantalSporten }: { aantalSporten: number }) {
   return (
     <div className="text-center animate-fade-up relative">
       <div
@@ -263,13 +297,16 @@ function SceneOutro() {
           background: "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(198,161,91,0.18) 0%, transparent 70%)",
         }}
       />
-      <p className="font-display text-4xl text-brand-ivory font-semibold tracking-tight mb-6">
+      <p className="font-display text-5xl text-brand-ivory font-semibold tracking-tight mb-4">
         Start<em className="not-italic text-gold-gradient">Sport</em>
       </p>
-      <p className="font-body text-brand-muted text-lg mb-8">
+      <p className="font-body text-brand-ivory text-xl mb-3">
         Vind jouw sportpakket in 2 minuten.
       </p>
-      <div className="inline-flex items-center gap-2 px-8 py-4 rounded-xl gold-shimmer text-brand-black text-sm font-medium">
+      <p className="font-mono text-brand-gold text-xs uppercase tracking-widest mb-10">
+        {aantalSporten > 0 ? `${aantalSporten} sporten` : "Meerdere sporten"} · Gratis · Geen account nodig
+      </p>
+      <div className="inline-flex items-center gap-2 px-10 py-5 rounded-xl gold-shimmer text-brand-black text-base font-semibold animate-glow-pulse">
         startsport.nl
       </div>
     </div>

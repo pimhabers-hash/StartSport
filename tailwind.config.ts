@@ -50,6 +50,17 @@ const config: Config = {
           "0%, 100%": { boxShadow: "0 0 0 0 rgba(198,161,91,0.28)" },
           "50%":      { boxShadow: "0 0 0 8px rgba(198,161,91,0)" },
         },
+        "cursor-tik": {
+          "0%":   { opacity: "0", transform: "translate(28px, 28px) scale(0.85)" },
+          "35%":  { opacity: "1", transform: "translate(0, 0) scale(1)" },
+          "48%":  { transform: "translate(0, 0) scale(0.8)" },
+          "60%":  { transform: "translate(0, 0) scale(1)" },
+          "100%": { opacity: "1", transform: "translate(0, 0) scale(1)" },
+        },
+        "ripple": {
+          "0%":   { opacity: "0.6", transform: "scale(0.3)" },
+          "100%": { opacity: "0", transform: "scale(2.2)" },
+        },
       },
       animation: {
         "fade-up":         "fade-up 0.6s ease-out both",
@@ -58,6 +69,8 @@ const config: Config = {
         "promo-voortgang": "promo-voortgang 1s linear forwards",
         "bg-drift":        "bg-drift 14s ease-in-out infinite",
         "glow-pulse":      "glow-pulse 2.2s ease-out infinite",
+        "cursor-tik":      "cursor-tik 1.8s cubic-bezier(0.22,1,0.36,1) both",
+        "ripple":          "ripple 0.6s ease-out both",
       },
     },
   },

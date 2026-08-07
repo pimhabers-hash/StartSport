@@ -6,12 +6,18 @@ export const metadata = { title: "StartSport — Promo" };
 export default async function PromoPage() {
   const supabase = await createClient();
 
-  const { data: sporten } = await supabase
-    .from("sports")
-    .select("id, naam, slug, icoon")
-    .eq("actief", true)
-    .order("volgorde")
-    .limit(4);
+  const [{ data: sporten }, { count: aantalSporten }] = await Promise.all([
+    supabase
+      .from("sports")
+      .select("id, naam, slug, icoon")
+      .eq("actief", true)
+      .order("volgorde")
+      .limit(4),
+    supabase
+      .from("sports")
+      .select("*", { count: "exact", head: true })
+      .eq("actief", true),
+  ]);
 
   const eersteSport = sporten?.[0];
 
@@ -29,6 +35,7 @@ export default async function PromoPage() {
     <PromoPlayer
       sporten={(sporten ?? []).map((s) => ({ naam: s.naam, icoon: s.icoon }))}
       sportNaam={eersteSport?.naam ?? "Padel"}
+      aantalSporten={aantalSporten ?? sporten?.length ?? 0}
       producten={(producten ?? []).map((p) => ({
         naam: p.naam,
         merk: p.merk,
