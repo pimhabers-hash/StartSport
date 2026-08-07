@@ -28,6 +28,8 @@ const SPORT_TREFWOORDEN: Record<string, string[]> = {
   fitness:    ["fitness", "gym", "yoga", "dumbbell", "kettlebell", "crossfit", "workout", "krachttraining"],
   volleybal:  ["volleybal", "volleyball", "beachvolley"],
   voetbal:    ["voetbal", "football", "soccer", "voetbalschoen"],
+  wandelen:   ["wandelen", "wandel", "hiking", "hike", "trekking", "nordic walking", "walking pole"],
+  wintersport: ["wintersport", "ski", "skiën", "snowboard", "ski touring", "skitour"],
 };
 
 /**
