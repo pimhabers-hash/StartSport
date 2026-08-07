@@ -61,8 +61,8 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
       const { rijen: ruweRijen } = await parseFeedBuffer(buffer, bestandsnaamHint);
 
       const bestaandeProducten = await haalAlleProducten(supabase);
-      const naamMap = new Map(bestaandeProducten.map((p) => [p.naam.toLowerCase().trim(), p.id]));
-      const eanMap = new Map(bestaandeProducten.filter((p) => p.ean).map((p) => [p.ean, p.id]));
+      const naamMap = new Map(bestaandeProducten.map((p) => [p.naam.toLowerCase().trim(), p]));
+      const eanMap = new Map(bestaandeProducten.filter((p) => p.ean).map((p) => [p.ean, p]));
 
       let succes = 0, mislukt = 0, overgeslagen = 0;
       const voorbeeldenOvergeslagenCategorieen = new Set<string>();
@@ -72,7 +72,14 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
       // aanroep per product, wat bij duizenden producten te traag is
       // en de functie-tijdslimiet overschrijdt).
       const teInsertenen: Record<string, unknown>[] = [];
-      const teUpdaten: Record<string, unknown>[] = [];
+      // Op id in plaats van een array: als meerdere feed-rijen in
+      // dezelfde run naar hetzelfde bestaande product verwijzen (bijv.
+      // maat/kleur-varianten met identieke naam), zou diezelfde rij
+      // twee keer in één upsert-batch terechtkomen — Postgres staat dat
+      // niet toe binnen één "ON CONFLICT DO UPDATE"-statement ("cannot
+      // affect row a second time") en laat dan de HELE batch falen. Met
+      // een Map op id overschrijft de laatste variant gewoon de vorige.
+      const teUpdaten = new Map<string, Record<string, unknown>>();
       // Houdt bij welke productnamen we in DEZE synchronisatie al gaan
       // toevoegen — voorkomt dubbele inserts wanneer een feed meerdere
       // regels heeft voor exact hetzelfde product (bijv. één regel per
@@ -97,9 +104,9 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
         }
 
         const genormaliseerdeNaam = rij.naam.toLowerCase().trim();
-        const bestaand_id = (rij.ean && eanMap.get(rij.ean)) ?? naamMap.get(genormaliseerdeNaam);
+        const bestaand = (rij.ean && eanMap.get(rij.ean)) ?? naamMap.get(genormaliseerdeNaam);
 
-        if (!bestaand_id) {
+        if (!bestaand) {
           // Alleen relevant voor NIEUWE producten: check of we deze naam
           // al eerder in deze zelfde run hebben ingepland om toe te voegen.
           if (nieuweNamenDitRun.has(genormaliseerdeNaam)) {
@@ -109,9 +116,31 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
           nieuweNamenDitRun.add(genormaliseerdeNaam);
         }
 
-        if (bestaand_id) {
-          teUpdaten.push({
-            id: bestaand_id,
+        if (bestaand) {
+          // Meerdere feed-rijen (bijv. maat/kleur-varianten) kunnen naar
+          // hetzelfde bestaande product verwijzen — die tellen dan niet
+          // los mee als "verwerkt", vandaar deze aparte teller zodat de
+          // samenvatting toch op het totaal aantal rijen uitkomt.
+          if (teUpdaten.has(bestaand.id)) dubbelOvergeslagen++;
+          // Een admin die dit product handmatig heeft bevestigd
+          // (geclassificeerd: true) kan ook de categorie/sport gecorrigeerd
+          // hebben — dat blijft ongewijzigd. Bij een nog-nooit-bevestigd
+          // product (geclassificeerd: false) mogen we category_id/sport_id
+          // wél opnieuw laten bepalen: zo corrigeren verbeteringen aan de
+          // matching-logica (zoals deze) zich ook met terugwerkende kracht
+          // op producten die al eerder gesynchroniseerd waren, in plaats
+          // van voor altijd aan hun oude, mogelijk foute waarde vast te
+          // zitten totdat een admin ze met de hand aanpast.
+          const herclassificeren = !bestaand.geclassificeerd;
+          const herClassificatieVelden = herclassificeren
+            ? {
+                category_id,
+                sport_id: abo.sport_id || matchSport(`${rij.naam} ${rij.categorie_ruw}`, sporten ?? []) || null,
+              }
+            : {};
+          teUpdaten.set(bestaand.id, {
+            ...bestaand,
+            ...herClassificatieVelden,
             prijs: prijsGetal,
             affiliate_url: rij.affiliate_url,
             afbeelding_url: rij.afbeelding_url || null,
@@ -151,12 +180,24 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
 
       for (let i = 0; i < teInsertenen.length; i += BATCH_GROOTTE) {
         const batch = teInsertenen.slice(i, i + BATCH_GROOTTE);
-        const { error } = await supabase.from("products").insert(batch);
+        // upsert op de unique constraint (provider_id, naam) i.p.v. een
+        // kale insert: als onze eigen dedup-check (naamMap, hierboven)
+        // door een randgeval tóch een bestaand product mist, faalt anders
+        // de HELE batch van 500 in één keer op die ene botsende rij. Met
+        // upsert wordt zo'n botsing gewoon een update van het bestaande
+        // product in plaats van een fout. (PostgREST's onConflict kan
+        // alleen kolomnamen targeten, geen expressie-index of
+        // constraint-naam — vandaar dat de db-index op de kolom "naam"
+        // zelf staat, niet op lower(naam).)
+        const { error } = await supabase
+          .from("products")
+          .upsert(batch, { onConflict: "provider_id,naam" });
         if (error) mislukt += batch.length; else succes += batch.length;
       }
 
-      for (let i = 0; i < teUpdaten.length; i += BATCH_GROOTTE) {
-        const batch = teUpdaten.slice(i, i + BATCH_GROOTTE);
+      const teUpdatenArray = Array.from(teUpdaten.values());
+      for (let i = 0; i < teUpdatenArray.length; i += BATCH_GROOTTE) {
+        const batch = teUpdatenArray.slice(i, i + BATCH_GROOTTE);
         // upsert op basis van 'id' werkt hier als bulk-update, omdat elke
         // rij al een bestaand product-id heeft (primary key conflict
         // triggert een update in plaats van een nieuwe insert).
