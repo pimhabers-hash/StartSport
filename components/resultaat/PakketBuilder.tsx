@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Image from "next/image";
+import { ProductAfbeelding } from "@/components/ProductAfbeelding";
 import type { CategorieOpties, PakketProduct } from "@/lib/configurator-engine";
 
 interface PakketBuilderProps {
@@ -107,17 +107,11 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
                     >
                       {/* Afbeelding */}
                       <div className="relative h-32 bg-brand-surface flex items-center justify-center">
-                        {product.afbeelding_url ? (
-                          <Image
-                            src={product.afbeelding_url}
-                            alt={product.naam}
-                            fill
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
-                            className="object-contain p-3"
-                          />
-                        ) : (
-                          <span className="text-3xl opacity-30">📦</span>
-                        )}
+                        <ProductAfbeelding
+                          src={product.afbeelding_url}
+                          alt={product.naam}
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
+                        />
                         {isBesteMatch && (
                           <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-brand-gold text-brand-black text-[10px] font-mono font-medium">
                             BESTE MATCH
@@ -174,11 +168,13 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
             {geselecteerdeProducten.map((product) => (
               <div key={product.id} className="flex items-center gap-3 pb-3 border-b border-brand-border/50 last:border-0">
                 <div className="w-10 h-10 rounded-lg bg-brand-surface flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                  {product.afbeelding_url ? (
-                    <Image src={product.afbeelding_url} alt={product.naam} fill sizes="40px" className="object-contain p-1" />
-                  ) : (
-                    <span className="text-sm opacity-30">📦</span>
-                  )}
+                  <ProductAfbeelding
+                    src={product.afbeelding_url}
+                    alt={product.naam}
+                    sizes="40px"
+                    className="object-contain p-1"
+                    fallbackClassName="text-sm opacity-30"
+                  />
                 </div>
                 <div className="min-w-0 flex-1" title={product.uitleg ?? undefined}>
                   <p className="text-brand-muted text-[10px] font-mono uppercase tracking-wide">{product.category.naam}</p>

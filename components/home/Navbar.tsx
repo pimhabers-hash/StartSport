@@ -9,6 +9,7 @@ export function Navbar() {
   const links = [
     { href: "/#sporten", label: "Sporten" },
     { href: "/advies", label: "Koopgidsen" },
+    { href: "/aanbieders", label: "Aanbieders" },
     { href: "/#hoe-het-werkt", label: "Hoe het werkt" },
     { href: "/over-ons", label: "Over ons" },
   ];

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import { Navbar } from "@/components/home/Navbar";
+import { ProductAfbeelding } from "@/components/ProductAfbeelding";
 
 interface SportData { naam: string; icoon: string | null; }
 interface ProductData {
@@ -51,22 +50,48 @@ export function PromoPlayer({ sporten, sportNaam, producten }: PromoPlayerProps)
   const totaalprijs = producten.reduce((sum, p) => sum + p.prijs, 0);
 
   return (
-    <div className="min-h-screen bg-brand-black">
-      <Navbar />
+    <div className="min-h-screen bg-brand-black relative overflow-hidden">
+      {/* Geen normale site-navbar — dit scherm is bedoeld om als losse
+          video/opname te gebruiken, geen klikbare site-chrome erin. */}
+      <div className="fixed top-11 sm:top-14 left-6 sm:left-12 z-20 font-display text-lg text-brand-ivory font-semibold tracking-tight">
+        Start<em className="not-italic text-gold-gradient">Sport</em>
+      </div>
+
+      {/* Scène-voortgang, als "stories"-balkjes — geeft de video meteen
+          een geproduceerde, herkenbare pacing i.p.v. een stille dia-show. */}
+      <div className="fixed top-6 inset-x-6 sm:inset-x-12 flex gap-1.5 z-20">
+        {VOLGORDE.map((s, i) => (
+          <div key={s} className="h-1 flex-1 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className={
+                i < sceneIndex
+                  ? "h-full w-full bg-brand-gold rounded-full"
+                  : i === sceneIndex
+                  ? "h-full w-0 bg-brand-gold rounded-full animate-promo-voortgang"
+                  : "h-full w-0 bg-brand-gold rounded-full"
+              }
+              style={i === sceneIndex ? { animationDuration: `${SCENE_DUUR[s]}ms` } : undefined}
+            />
+          </div>
+        ))}
+      </div>
 
       <main className="min-h-screen flex items-center justify-center px-6 pt-16 relative overflow-hidden">
         <div
           aria-hidden
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0 pointer-events-none animate-bg-drift"
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 70% 50%, rgba(198,161,91,0.06) 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 20% 80%, rgba(198,161,91,0.04) 0%, transparent 60%)",
+              "radial-gradient(ellipse 80% 60% at 70% 50%, rgba(198,161,91,0.08) 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 20% 80%, rgba(198,161,91,0.05) 0%, transparent 60%)",
           }}
         />
 
         <div
-          className="relative z-10 w-full max-w-2xl transition-opacity duration-500"
-          style={{ opacity: zichtbaar ? 1 : 0 }}
+          className="relative z-10 w-full max-w-2xl transition-all duration-500 ease-out"
+          style={{
+            opacity: zichtbaar ? 1 : 0,
+            transform: zichtbaar ? "scale(1)" : "scale(0.98)",
+          }}
         >
           {huidigeScene === "hero" && <SceneHero />}
           {huidigeScene === "sporten" && <SceneSporten sporten={sporten} />}
@@ -113,7 +138,7 @@ function SceneSporten({ sporten }: { sporten: SportData[] }) {
           <div
             key={s.naam}
             className={`card-surface rounded-2xl p-6 transition-all duration-500 ${
-              i === 0 ? "border-brand-gold shadow-lg shadow-brand-gold/10" : ""
+              i === 0 ? "!border-brand-gold shadow-lg shadow-brand-gold/10 animate-glow-pulse" : ""
             }`}
           >
             <div className="w-12 h-12 rounded-xl bg-brand-surface flex items-center justify-center text-2xl mb-3">
@@ -146,7 +171,7 @@ function SceneConfigurator({ sportNaam }: { sportNaam: string }) {
             key={n}
             className={`rounded-xl p-5 border transition-all duration-200 ${
               i === 0
-                ? "border-brand-gold bg-brand-gold/5 shadow-lg shadow-brand-gold/10"
+                ? "border-brand-gold bg-brand-gold/5 shadow-lg shadow-brand-gold/10 animate-glow-pulse"
                 : "border-brand-border bg-brand-card"
             }`}
           >
@@ -192,14 +217,14 @@ function SceneResultaat({
       {producten.length > 0 ? (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            {producten.map((p) => (
-              <div key={p.naam} className="card-surface rounded-2xl overflow-hidden">
+            {producten.map((p, i) => (
+              <div
+                key={p.naam}
+                className="card-surface rounded-2xl overflow-hidden animate-fade-up"
+                style={{ animationDelay: `${i * 120}ms` }}
+              >
                 <div className="relative h-28 bg-brand-surface flex items-center justify-center">
-                  {p.afbeelding_url ? (
-                    <Image src={p.afbeelding_url} alt={p.naam} fill sizes="200px" className="object-contain p-3" />
-                  ) : (
-                    <span className="text-2xl opacity-30">📦</span>
-                  )}
+                  <ProductAfbeelding src={p.afbeelding_url} alt={p.naam} sizes="200px" />
                 </div>
                 <div className="p-3">
                   <p className="text-brand-gold text-[10px] font-mono uppercase tracking-widest mb-1">{p.categorie}</p>
@@ -209,7 +234,10 @@ function SceneResultaat({
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between px-5 py-3 rounded-xl border border-brand-gold/30">
+          <div
+            className="flex items-center justify-between px-5 py-3 rounded-xl border border-brand-gold/30 animate-fade-up"
+            style={{ animationDelay: `${producten.length * 120 + 150}ms` }}
+          >
             <span className="text-brand-muted text-sm font-body">Totaal</span>
             <span className="font-mono text-brand-gold text-2xl font-medium">
               €{totaalprijs.toFixed(2).replace(".", ",")}
@@ -227,7 +255,14 @@ function SceneResultaat({
 
 function SceneOutro() {
   return (
-    <div className="text-center animate-fade-up">
+    <div className="text-center animate-fade-up relative">
+      <div
+        aria-hidden
+        className="absolute -inset-x-20 -inset-y-16 -z-10 opacity-60"
+        style={{
+          background: "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(198,161,91,0.18) 0%, transparent 70%)",
+        }}
+      />
       <p className="font-display text-4xl text-brand-ivory font-semibold tracking-tight mb-6">
         Start<em className="not-italic text-gold-gradient">Sport</em>
       </p>

@@ -1,9 +1,9 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/home/Navbar";
 import { Footer } from "@/components/home/Footer";
+import { ProductAfbeelding } from "@/components/ProductAfbeelding";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -90,10 +90,13 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
 
             return (
               <div className="space-y-3 mb-8">
-                <div className="flex flex-wrap gap-3">
+                {/* Op mobiel horizontaal scrollend i.p.v. wrappen — met
+                    16 filters samen zou wrappen alle producten ver onder
+                    de vouw duwen op een smal scherm. */}
+                <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto sm:overflow-visible -mx-6 px-6 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
                   <Link
                     href={filterHref()}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
                       !sportFilter && !categorieFilter ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
                     }`}
                   >
@@ -103,7 +106,7 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                     <Link
                       key={s.slug}
                       href={filterHref(sportFilter === s.slug ? undefined : s.slug, categorieFilter)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
                         sportFilter === s.slug ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
                       }`}
                     >
@@ -111,12 +114,12 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                     </Link>
                   ))}
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto sm:overflow-visible -mx-6 px-6 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
                   {(categorieen ?? []).map((c) => (
                     <Link
                       key={c.slug}
                       href={filterHref(sportFilter, categorieFilter === c.slug ? undefined : c.slug)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
                         categorieFilter === c.slug ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
                       }`}
                     >
@@ -141,17 +144,12 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                     className="card-surface rounded-2xl overflow-hidden group hover:border-brand-gold/30 transition-colors"
                   >
                     <div className="relative h-40 bg-brand-surface flex items-center justify-center overflow-hidden">
-                      {product.afbeelding_url ? (
-                        <Image
-                          src={product.afbeelding_url}
-                          alt={product.naam}
-                          fill
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                          className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <span className="text-3xl opacity-30">📦</span>
-                      )}
+                      <ProductAfbeelding
+                        src={product.afbeelding_url}
+                        alt={product.naam}
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+                      />
                     </div>
                     <div className="p-4">
                       {categorieNaam && (

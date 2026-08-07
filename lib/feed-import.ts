@@ -266,6 +266,11 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "cap", "gorra"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
   bescherming:  ["bescherming", "protection", "proteccion", "guard"],
+  "vitaminen-en-supplementen": [
+    "vitamine", "vitamin", "supplement", "mineraal", "mineral",
+    "capsule", "capsul", "gummies", "collageen", "collagen",
+    "magnesium", "creatine", "ashwagandha", "probiotica", "probiotic",
+  ],
 };
 
 function escapeRegex(tekst: string): string {
@@ -289,7 +294,7 @@ function bevatAlsWoord(tekst: string, trefwoord: string): boolean {
 // (dat beschrijft alleen waar de tas voor bedoeld is). Door "tassen" en
 // "schoenen" vóór "racket" te checken, wint de juiste, specifiekere
 // categorie in plaats van het eerst-gevonden woord.
-const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "kleding", "ballen", "accessoires", "voeding", "bescherming", "racket"];
+const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "kleding", "ballen", "vitaminen-en-supplementen", "accessoires", "voeding", "bescherming", "racket"];
 
 export function matchCategorie(
   ruweTekst: string,

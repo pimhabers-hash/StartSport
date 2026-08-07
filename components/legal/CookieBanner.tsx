@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 type ConsentStatus = "geaccepteerd" | "geweigerd" | "aangepast";
 
@@ -13,6 +14,7 @@ interface ConsentVoorkeuren {
 const OPSLAG_KEY = "startsport_cookie_consent";
 
 export function CookieBanner() {
+  const pathname = usePathname();
   const [zichtbaar, setZichtbaar] = useState(false);
   const [instellingenOpen, setInstellingenOpen] = useState(false);
   const [voorkeuren, setVoorkeuren] = useState<ConsentVoorkeuren>({
@@ -57,6 +59,9 @@ export function CookieBanner() {
     sla_op("aangepast", voorkeuren);
   }
 
+  // /promo is bedoeld om als losse video op te nemen (reclamemateriaal) —
+  // daar mag geen cookiebanner overheen poppen.
+  if (pathname === "/promo") return null;
   if (!zichtbaar) return null;
 
   return (
