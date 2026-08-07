@@ -252,26 +252,46 @@ export function schatNiveauEnFrequentie(budgetklasse: "budget" | "middenklasse" 
 // Nederlandse namen hebben.
 const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   racket:       ["racket", "raquet", "raqueta", "pala", "paddle", "racquet"],
-  schoenen:     ["schoen", "shoe", "zapatilla", "calzado", "footwear"],
-  ballen:       ["bal", "ball", "bola", "pelota"],
-  tassen:       ["tas", "bag", "bolsa", "mochila", "backpack"],
+  schoenen:     ["schoen", "schoenen", "shoe", "zapatilla", "calzado", "footwear"],
+  ballen:       ["bal", "ballen", "ball", "bola", "pelota"],
+  tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack"],
   kleding:      [
     "kleding", "cloth", "clothing", "apparel", "ropa", "camiseta", "textil",
     "shirt", "tshirt", "t-shirt",
-    "short", "pant", "pantalon", "trouser",
+    "short", "pant", "pantalon", "trouser", "broek", "jogbroek",
     "jacket", "chaqueta",
     "sweat", "sweater", "sweatshirt", "hoodie", "hooded", "sudadera",
     "polo", "tank", "skirt", "falda", "dress", "vestido",
   ],
-  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "cap", "gorra"],
+  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "cap", "gorra", "strip"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
-  bescherming:  ["bescherming", "protection", "proteccion", "guard"],
+  bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector"],
   "vitaminen-en-supplementen": [
-    "vitamine", "vitamin", "supplement", "mineraal", "mineral",
+    "vitamine", "vitaminen", "vitamin", "supplement", "mineraal", "mineral",
     "capsule", "capsul", "gummies", "collageen", "collagen",
     "magnesium", "creatine", "ashwagandha", "probiotica", "probiotic",
   ],
 };
+
+// Sportnamen die in Nederlandse feeds vaak aan het zelfstandig naamwoord
+// vastgeplakt worden i.p.v. los geschreven ("padeltas", "padelracket",
+// "padelballen") — anders dan de meeste Engelse/Spaanse feeds ("padel
+// bag", "padel racket"). Woordgrens-matching herkent de trefwoorden dan
+// niet meer omdat ze middenin een aaneengeschreven woord zitten.
+const SPORT_VOORVOEGSELS = ["padel", "tennis", "voetbal", "volleybal", "hockey", "hardloop", "fitness", "pickleball", "basketbal"];
+
+/**
+ * Knipt bekende sportnaam-voorvoegsels los van wat erna komt (bijv.
+ * "Padelballen" → "Padel ballen"), zodat de trefwoorden-matching hieronder
+ * ze alsnog als apart woord herkent.
+ */
+function loskoppelSportVoorvoegsel(tekst: string): string {
+  let resultaat = tekst;
+  for (const sport of SPORT_VOORVOEGSELS) {
+    resultaat = resultaat.replace(new RegExp(`\\b(${sport})([a-z])`, "gi"), "$1 $2");
+  }
+  return resultaat;
+}
 
 function escapeRegex(tekst: string): string {
   return tekst.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -301,7 +321,13 @@ export function matchCategorie(
   categorieen: { id: string; naam: string; slug: string }[],
   productNaam: string = ""
 ): string | null {
-  const kandidaten = [ruweTekst, productNaam].filter(Boolean);
+  // Productnaam eerst: die is een specifieker, betrouwbaarder signaal dan
+  // de ruwe feed-categorie. Sommige aanbieders (bijv. Padeldiscount) geven
+  // vrijwel elk product dezelfde brede ruwe categorie ("Padel accessoires")
+  // mee, ongeacht of het een tas, bal of racket is — als die tekst als
+  // eerste gecheckt zou worden, wint dat catch-all label meteen en komt de
+  // (juistere) productnaam nooit meer aan bod.
+  const kandidaten = [productNaam, ruweTekst].filter(Boolean).map(loskoppelSportVoorvoegsel);
 
   // Sorteer de meegegeven categorieën op onze vaste prioriteitsvolgorde,
   // zodat categorieën die niet in de lijst staan (aangepaste categorieën)

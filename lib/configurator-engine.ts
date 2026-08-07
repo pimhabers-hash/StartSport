@@ -39,6 +39,7 @@ export interface ProductMatcher {
   score: number;
   binnen_buiten?: BinnenBuiten | null;
   geslacht?: "man" | "vrouw" | "unisex" | null;
+  sport_id: string | null;
   category: { id: string; naam: string; slug: string };
   provider: { naam: string; logo_url: string | null } | null;
 }
@@ -81,39 +82,29 @@ export const DOEL_CATEGORIE_HINTS: Record<Doel, string[]> = {
 };
 
 /**
- * Welke productcategorieën horen daadwerkelijk bij welke sport.
- * Nodig omdat feeds (vooral universele feeds zonder sport_id, zoals
- * Sportsprofi) producten aanleveren die met "sport_id IS NULL" voor
- * élke sport zouden meetellen — een racket of mudguard hoort dan
- * alsnog niet thuis in een Fitness- of Hardlopen-pakket. Categorieën
- * die voor geen enkele sport specifiek zijn (voeding/supplementen,
- * accessoires) staan bij elke sport in de lijst.
- *
- * Handmatig onderhouden (net als CATEGORIE_TREFWOORDEN/-PRIORITEIT in
- * lib/feed-import.ts) — met 7 sporten × 9 categorieën is een aparte
- * beheertabel vooralsnog overkill.
+ * Categorieën die voor élke sport zinnig zijn, ook zonder dat een
+ * product aan een specifieke sport gekoppeld is (bijv. een
+ * voedingssupplement of een universeel drinkflesje) — voeding hoort
+ * nergens exclusief bij, dus die mag altijd meetellen als "universeel"
+ * product (sport_id null).
  */
-export const SPORT_CATEGORIE_COMPATIBILITEIT: Record<string, string[]> = {
-  padel:      ["racket", "ballen", "schoenen", "tassen", "kleding", "accessoires", "voeding", "vitaminen-en-supplementen"],
-  tennis:     ["racket", "ballen", "schoenen", "tassen", "kleding", "accessoires", "voeding", "vitaminen-en-supplementen"],
-  pickleball: ["racket", "ballen", "schoenen", "tassen", "kleding", "accessoires", "voeding", "vitaminen-en-supplementen"],
-  voetbal:    ["ballen", "schoenen", "tassen", "kleding", "bescherming", "accessoires", "voeding", "vitaminen-en-supplementen"],
-  volleybal:  ["ballen", "schoenen", "tassen", "kleding", "bescherming", "accessoires", "voeding", "vitaminen-en-supplementen"],
-  hardlopen:  ["schoenen", "tassen", "kleding", "accessoires", "voeding", "vitaminen-en-supplementen"],
-  fitness:    ["schoenen", "tassen", "kleding", "bescherming", "accessoires", "voeding", "vitaminen-en-supplementen"],
-};
+const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen"];
 
 /**
- * True als een product met deze categorie relevant is voor de gekozen
- * sport. Onbekende sport-slugs (nog niet in de matrix opgenomen, bijv.
- * een net toegevoegde sport) laten alles door — anders zou een nieuwe
- * sport in de admin per direct een lege resultaatpagina geven totdat
- * iemand de matrix bijwerkt.
+ * True als een product daadwerkelijk bij de gekozen sport hoort. Een
+ * product telt alleen mee als het óf expliciet aan déze sport gekoppeld
+ * is, óf universeel is (sport_id null) én in een sportonafhankelijke
+ * categorie zit. Zonder deze check zou een universeel product (sport_id
+ * null, bijv. uit een brede feed als Sportsprofi zonder vaste sport)
+ * voor élke sport meetellen — een ijshockeyschoen of mudguard hoort dan
+ * alsnog niet thuis in een Fitness- of Padel-pakket, ook al is
+ * "Schoenen"/"Bescherming" op zich een geldige categorie. Producten die
+ * hierdoor nergens matchen, blijven gewoon zichtbaar op de
+ * aanbiederspagina — die filtert niet op sport.
  */
-function categorieHoortBijSport(categorieSlug: string, sportSlug: string): boolean {
-  const toegestaan = SPORT_CATEGORIE_COMPATIBILITEIT[sportSlug];
-  if (!toegestaan) return true;
-  return toegestaan.includes(categorieSlug);
+function productHoortBijSport(product: ProductMatcher, sportId: string): boolean {
+  if (product.sport_id === sportId) return true;
+  return product.sport_id === null && UNIVERSELE_CATEGORIEEN.includes(product.category.slug);
 }
 
 function berekenMatchScore(
@@ -213,12 +204,11 @@ export function groepeerPerCategorieMetOpties(
   input: ConfiguratorInput,
   maxOptiesPerCategorie = 4
 ): CategorieOpties[] {
-  // Alleen categorieën die daadwerkelijk bij deze sport horen — voorkomt
-  // dat universele producten (sport_id null, bijv. uit een brede feed)
-  // als racket/mudguard/etc. in een pakket voor een niet-passende sport
-  // terechtkomen.
+  // Alleen producten die daadwerkelijk bij deze sport horen — voorkomt
+  // dat universele producten (sport_id null, bijv. uit een brede feed
+  // zonder vaste sport) voor élke sport meetellen.
   const relevanteProducten = alleProducten.filter((p) =>
-    categorieHoortBijSport(p.category.slug, input.sport_slug)
+    productHoortBijSport(p, input.sport_id)
   );
 
   const gescoord: PakketProduct[] = relevanteProducten.map((p) => ({

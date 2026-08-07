@@ -41,7 +41,7 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
   const { data: rawProducten } = await supabase
     .from("products")
     .select(`
-      id, naam, merk, prijs, niveau, budgetklasse,
+      id, naam, merk, prijs, niveau, budgetklasse, sport_id,
       geschikt_voor_frequentie, affiliate_url, afbeelding_url, uitleg, score, geslacht,
       categories ( id, naam, slug ),
       providers ( naam, logo_url )
