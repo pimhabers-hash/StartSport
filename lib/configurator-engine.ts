@@ -63,7 +63,7 @@ const GEWICHT = {
   frequentie:    12,
   binnen_buiten:  8,
   doel:           5,
-  geslacht:       6,
+  geslacht:      18,
   kwaliteit:     10, // score 0–5 → 0–10 punten
 };
 
@@ -89,6 +89,20 @@ export const DOEL_CATEGORIE_HINTS: Record<Doel, string[]> = {
  * product (sport_id null).
  */
 const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen"];
+
+/**
+ * Categorieën waarbij een klant logischerwijs nul, één, of meerdere
+ * producten tegelijk zou kunnen willen — in tegenstelling tot bijv.
+ * Racket/Schoenen/Kleding/Ballen/Tassen, waar je nu eenmaal maar één
+ * exemplaar aanschaft en de configurator dus prima één "beste match"
+ * vooraf mag selecteren. Bij deze categorieën is het juist fout om er
+ * automatisch precies één te selecteren: een klant kan best meerdere
+ * accessoires willen (grip én bidon én cap), of geen enkel supplement.
+ * De UI (PakketBuilder) gebruikt dit om deze categorieën als
+ * aan/uit-selectie per product te tonen i.p.v. als radio-keuze, zonder
+ * standaard iets voor te selecteren.
+ */
+export const MEERVOUDIGE_CATEGORIEEN = ["accessoires", "voeding", "vitaminen-en-supplementen"];
 
 /**
  * True als een product daadwerkelijk bij de gekozen sport hoort. Een
@@ -155,18 +169,28 @@ function berekenMatchScore(
     }
   }
 
-  // 6. Geslacht — unisex-producten passen altijd, dus die krijgen geen
-  // straf. Alleen bij een expliciete man/vrouw-match op beide kanten
-  // geven we een lichte boost; bij een duidelijke mismatch (product is
-  // "man", gebruiker koos "vrouw") juist geen punten voor dit onderdeel.
-  if (input.geslacht && input.geslacht !== "anders" && product.geslacht) {
-    if (product.geslacht === "unisex" || product.geslacht === input.geslacht) {
+  // 6. Geslacht — bij een expliciete man/vrouw-keuze telt dit nu zwaar
+  // genoeg mee om écht het verschil te maken tussen twee verder
+  // vergelijkbare producten (bijv. dezelfde schoen in een heren- en
+  // damesversie). Unisex-producten passen altijd, dus die krijgen
+  // dezelfde volle bonus; bij een duidelijke mismatch (product is
+  // "man", klant koos "vrouw") gewoon 0 punten — nooit hard uitsluiten,
+  // want geslacht-data is een inschatting op basis van de productnaam.
+  if (input.geslacht === "man" || input.geslacht === "vrouw") {
+    if (!product.geslacht || product.geslacht === "unisex" || product.geslacht === input.geslacht) {
       score += GEWICHT.geslacht;
     }
-    // bij mismatch: gewoon 0 punten voor dit onderdeel, product blijft
-    // zichtbaar (nooit hard uitsluiten — data is een inschatting)
   } else {
-    score += GEWICHT.geslacht / 2; // neutraal als er geen voorkeur/data is
+    // Geen voorkeur opgegeven ("anders" of helemaal niet ingevuld):
+    // unisex/onbekend krijgt de volle bonus als veilige, voor iedereen
+    // geschikte keuze. Man- en vrouw-producten krijgen een kleine,
+    // GELIJKE bonus — zodat niet toevallig altijd dezelfde sekse wint
+    // puur doordat die net iets beter scoort op andere factoren.
+    if (!product.geslacht || product.geslacht === "unisex") {
+      score += GEWICHT.geslacht;
+    } else {
+      score += GEWICHT.geslacht / 3;
+    }
   }
 
   // 7. Productkwaliteit

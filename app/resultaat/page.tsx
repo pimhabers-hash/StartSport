@@ -19,6 +19,7 @@ const LABEL: Record<string, string> = {
   binnen: "Binnen", buiten: "Buiten", beide: "Binnen & buiten",
   gezond_blijven: "Gezond blijven", afvallen: "Afvallen",
   sociaal: "Sociaal", prestatie: "Beter worden",
+  man: "Voor heren", vrouw: "Voor dames",
 };
 
 export default async function ResultaatPage({ searchParams }: PageProps) {
@@ -90,7 +91,8 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
     geslacht: geslacht as "man" | "vrouw" | "anders" | undefined,
   });
 
-  const chips = [niveau, budgetklasse, frequentie, binnen_buiten, doel].filter(Boolean);
+  const geslachtChip = geslacht === "man" || geslacht === "vrouw" ? geslacht : null;
+  const chips = [niveau, budgetklasse, frequentie, binnen_buiten, doel, geslachtChip].filter(Boolean);
 
   return (
     <>
@@ -117,8 +119,9 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
               ))}
             </div>
             <p className="text-brand-muted text-sm font-body max-w-xl mt-3">
-              Voor elke categorie tonen we onze beste match, plus alternatieven. Klik op een
-              suggestie om die te wisselen in je pakket rechts.
+              Op basis van je antwoorden hebben we per categorie de beste match voor jou
+              uitgezocht, plus alternatieven. Klik op een suggestie om 'm te wisselen in je
+              pakket rechts — het is en blijft jouw eigen samenstelling.
             </p>
           </div>
 

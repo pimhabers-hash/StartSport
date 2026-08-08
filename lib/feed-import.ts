@@ -263,7 +263,7 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
     "sweat", "sweater", "sweatshirt", "hoodie", "hooded", "sudadera",
     "polo", "tank", "skirt", "falda", "dress", "vestido",
   ],
-  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "cap", "gorra", "strip"],
+  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "cap", "gorra", "strip", "hoes", "cover", "funda"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
   bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector"],
   "vitaminen-en-supplementen": [
