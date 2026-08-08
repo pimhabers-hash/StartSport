@@ -5,13 +5,13 @@ const STAPPEN = [
     nr: "01",
     titel: "Kies je sport",
     omschrijving:
-      "Selecteer de sport waarmee je wilt beginnen. Van padel tot schermen — we dekken het allemaal.",
+      "Selecteer de sport waarmee je wilt beginnen. Van padel tot wintersport — steeds meer sporten.",
   },
   {
     nr: "02",
     titel: "Vertel ons over jezelf",
     omschrijving:
-      "Niveau, budget, hoe vaak je speelt. Drie vragen, geen formulieren, geen account nodig.",
+      "Niveau, budget, hoe vaak je speelt. Een paar korte vragen, geen formulieren, geen account nodig.",
   },
   {
     nr: "03",

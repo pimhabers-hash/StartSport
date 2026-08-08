@@ -13,13 +13,14 @@ interface ProductAfbeeldingProps {
 }
 
 /**
- * Productafbeelding met nette fallback. Externe aanbieder-afbeeldingen
- * (soms een gewone WordPress-upload i.p.v. een CDN) laden niet altijd
- * betrouwbaar via Next's image-optimizer — vooral wanneer een pagina
- * tientallen afbeeldingen tegelijk aanvraagt kan de herkomstserver een
- * los verzoek laten mislukken. In plaats van een kapot icoon tonen we
- * dan gewoon de neutrale placeholder, net als wanneer er geen
- * afbeelding_url bekend is.
+ * Productafbeelding met nette fallback. We laden extern via `unoptimized`
+ * (browser haalt de bron rechtstreeks op) in plaats van via Next's
+ * server-side image-optimizer. Reden: sommige aanbieders (bijv. Sportsprofi)
+ * draaien achter Cloudflare-botbescherming die het server-side verzoek van
+ * de optimizer altijd blokkeert (JS-challenge, geen headless fetch) — met
+ * als gevolg dat die producten voor ALLE bezoekers permanent de
+ * placeholder toonden, nooit de echte foto. Een gewone browser die de
+ * bron rechtstreeks aanvraagt komt daar wel doorheen.
  */
 export function ProductAfbeelding({
   src,
@@ -41,6 +42,7 @@ export function ProductAfbeelding({
       alt={alt}
       fill
       sizes={sizes}
+      unoptimized
       className={className}
       onError={() => setMislukt(true)}
     />
