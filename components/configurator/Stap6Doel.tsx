@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OptieKaart } from "./OptieKaart";
-import { useWizard, type Doel, type LeeftijdCategorie, type Geslacht } from "./WizardContext";
+import { useWizard, type Doel, type Geslacht } from "./WizardContext";
 
 const DOELEN: { waarde: Doel; label: string; omschrijving: string; icoon: string }[] = [
   { waarde: "sociaal",       label: "Sociaal",         omschrijving: "Ik wil het vooral gezellig hebben en nieuwe mensen ontmoeten.", icoon: "👥" },
@@ -13,12 +13,6 @@ const DOELEN: { waarde: Doel; label: string; omschrijving: string; icoon: string
   { waarde: "competitie",    label: "Competitie",      omschrijving: "Ik wil wedstrijden spelen en winnen.", icoon: "🏆" },
 ];
 
-const LEEFTIJDEN: { waarde: LeeftijdCategorie; label: string }[] = [
-  { waarde: "junior",     label: "Junior (t/m 17)" },
-  { waarde: "volwassene", label: "Volwassene (18–59)" },
-  { waarde: "senior",     label: "Senior (60+)" },
-];
-
 const GESLACHTEN: { waarde: Geslacht; label: string }[] = [
   { waarde: "man",    label: "Man" },
   { waarde: "vrouw",  label: "Vrouw" },
@@ -26,7 +20,7 @@ const GESLACHTEN: { waarde: Geslacht; label: string }[] = [
 ];
 
 export function Stap6Doel() {
-  const { state, setDoel, setLeeftijd, setGeslacht, isCompleet } = useWizard();
+  const { state, setDoel, setGeslacht, isCompleet } = useWizard();
   const router = useRouter();
   const [samenstellen, setSamenstellen] = useState(false);
 
@@ -42,7 +36,6 @@ export function Stap6Doel() {
       frequentie:   state.frequentie!,
       binnen_buiten: state.binnen_buiten!,
       doel:         state.doel!,
-      ...(state.leeftijd  ? { leeftijd:  state.leeftijd }  : {}),
       ...(state.geslacht  ? { geslacht:  state.geslacht }  : {}),
     });
 
@@ -80,31 +73,11 @@ export function Stap6Doel() {
         ))}
       </div>
 
-      {/* Optionele vragen */}
+      {/* Optionele vraag */}
       <div className="border-t border-brand-border pt-6 mb-8 space-y-5">
         <p className="text-brand-muted text-xs font-mono uppercase tracking-widest">
           Optioneel — voor nog betere aanbevelingen
         </p>
-
-        {/* Leeftijd */}
-        <div>
-          <p className="text-brand-ivory text-sm font-body mb-3">Leeftijdscategorie</p>
-          <div className="flex flex-wrap gap-2">
-            {LEEFTIJDEN.map((l) => (
-              <button
-                key={l.waarde}
-                onClick={() => setLeeftijd(l.waarde)}
-                className={`px-4 py-2 rounded-xl text-sm font-body border transition-all ${
-                  state.leeftijd === l.waarde
-                    ? "border-brand-gold bg-brand-gold/10 text-brand-gold"
-                    : "border-brand-border text-brand-muted hover:border-brand-gold/40"
-                }`}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Geslacht */}
         <div>

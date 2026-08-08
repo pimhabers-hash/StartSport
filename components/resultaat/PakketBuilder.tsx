@@ -133,7 +133,10 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
               <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity ${isUitgevinkt ? "opacity-40 pointer-events-none" : ""}`}>
                 {c.opties.map((product) => {
                   const isGeselecteerd = actieveIds.has(product.id) && !isUitgevinkt;
-                  const isBesteMatch = product.id === c.opties[0].id;
+                  // Bij meervoudige categorieën (accessoires/voeding/vitaminen) staat
+                  // niets vooraf geselecteerd, dus een "beste match"-badge zou daar
+                  // een keuze suggereren die we niet voor de klant hebben gemaakt.
+                  const isBesteMatch = !isMeervoudig && product.id === c.opties[0].id;
 
                   return (
                     <button

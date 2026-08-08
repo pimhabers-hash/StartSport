@@ -105,6 +105,29 @@ const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen"];
 export const MEERVOUDIGE_CATEGORIEEN = ["accessoires", "voeding", "vitaminen-en-supplementen"];
 
 /**
+ * Volgorde waarin categorieën in het resultaat getoond worden — de
+ * kernuitrusting (racket/schoenen/kleding/ballen/tassen) eerst, waar de
+ * klant voor kwam, en de optionele extra's (accessoires/voeding/
+ * vitaminen, zie MEERVOUDIGE_CATEGORIEEN hierboven) helemaal onderaan.
+ * Onbekende/nieuwe categorieën vallen terug op alfabetisch, ná deze
+ * vaste lijst.
+ */
+const CATEGORIE_VOLGORDE = [
+  "kleding", "schoenen", "racket", "ballen", "tassen", "bescherming",
+  "voeding", "vitaminen-en-supplementen", "accessoires",
+];
+
+function categorieSorteerWaarde(slug: string): number {
+  const idx = CATEGORIE_VOLGORDE.indexOf(slug);
+  return idx === -1 ? CATEGORIE_VOLGORDE.length : idx;
+}
+
+function sorteerOpCategorieVolgorde<T extends { category: { naam: string; slug: string } }>(a: T, b: T): number {
+  const verschil = categorieSorteerWaarde(a.category.slug) - categorieSorteerWaarde(b.category.slug);
+  return verschil !== 0 ? verschil : a.category.naam.localeCompare(b.category.naam);
+}
+
+/**
  * True als een product daadwerkelijk bij de gekozen sport hoort. Een
  * product telt alleen mee als het óf expliciet aan déze sport gekoppeld
  * is, óf universeel is (sport_id null) én in een sportonafhankelijke
@@ -207,9 +230,7 @@ function selecteerPerCategorie(producten: PakketProduct[]): PakketProduct[] {
       perCategorie.set(product.category.id, product);
     }
   }
-  return Array.from(perCategorie.values()).sort((a, b) =>
-    a.category.naam.localeCompare(b.category.naam)
-  );
+  return Array.from(perCategorie.values()).sort(sorteerOpCategorieVolgorde);
 }
 
 export interface CategorieOpties {
@@ -256,7 +277,7 @@ export function groepeerPerCategorieMetOpties(
     });
   }
 
-  return resultaat.sort((a, b) => a.category.naam.localeCompare(b.category.naam));
+  return resultaat.sort(sorteerOpCategorieVolgorde);
 }
 
 function berekenAlternatief(

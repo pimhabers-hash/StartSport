@@ -1,6 +1,6 @@
 "use client";
 
-import { useWizard } from "./WizardContext";
+import { useWizard, isAltijdBuiten } from "./WizardContext";
 
 const STAPPEN = [
   { nr: 1, label: "Sport" },
@@ -14,8 +14,11 @@ const STAPPEN = [
 export function WizardVoortgang() {
   const { state } = useWizard();
   const eersteStap = state.sport !== null ? 2 : 1;
+  const overslaanBinnenBuiten = isAltijdBuiten(state.sport);
 
-  const zichtbareStappen = STAPPEN.filter((s) => s.nr >= eersteStap);
+  const zichtbareStappen = STAPPEN.filter(
+    (s) => s.nr >= eersteStap && !(overslaanBinnenBuiten && s.nr === 5)
+  );
 
   return (
     <div className="w-full max-w-lg mx-auto mb-10">

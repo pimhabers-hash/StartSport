@@ -21,9 +21,19 @@ export interface WizardSport {
   icoon?: string;
 }
 
-export type LeeftijdCategorie = "junior" | "volwassene" | "senior";
 export type Geslacht = "man" | "vrouw" | "anders";
 export type Doel = "gezond_blijven" | "afvallen" | "competitie" | "sociaal" | "prestatie";
+
+/**
+ * Sporten die vrijwel altijd buiten plaatsvinden — voor deze sporten voegt
+ * de binnen/buiten-vraag niets toe (het antwoord ligt al vast), dus die
+ * stap slaan we over en vullen "buiten" automatisch in.
+ */
+const ALTIJD_BUITEN_SPORTEN = ["wandelen", "wintersport"];
+
+export function isAltijdBuiten(sport: WizardSport | null): boolean {
+  return sport !== null && ALTIJD_BUITEN_SPORTEN.includes(sport.slug);
+}
 
 export interface WizardState {
   stap: number; // 1–6
@@ -33,7 +43,6 @@ export interface WizardState {
   frequentie: GebruikFrequentie | null;
   binnen_buiten: BinnenBuiten | null;
   doel: Doel | null;
-  leeftijd: LeeftijdCategorie | null;
   geslacht: Geslacht | null;
 }
 
@@ -45,7 +54,6 @@ interface WizardContextValue {
   setFrequentie: (frequentie: GebruikFrequentie) => void;
   setBinnenBuiten: (bb: BinnenBuiten) => void;
   setDoel: (doel: Doel) => void;
-  setLeeftijd: (l: LeeftijdCategorie) => void;
   setGeslacht: (g: Geslacht) => void;
   vorigeStap: () => void;
   volgendeStap: () => void;
@@ -72,7 +80,6 @@ export function WizardProvider({
     frequentie: null,
     binnen_buiten: null,
     doel: null,
-    leeftijd: null,
     geslacht: null,
   });
 
@@ -89,7 +96,13 @@ export function WizardProvider({
   }, []);
 
   const setFrequentie = useCallback((frequentie: GebruikFrequentie) => {
-    setState((s) => ({ ...s, frequentie, stap: s.stap < 5 ? 5 : s.stap }));
+    setState((s) => {
+      if (isAltijdBuiten(s.sport)) {
+        // Binnen/buiten-stap overslaan: antwoord ligt al vast.
+        return { ...s, frequentie, binnen_buiten: "buiten", stap: s.stap < 6 ? 6 : s.stap };
+      }
+      return { ...s, frequentie, stap: s.stap < 5 ? 5 : s.stap };
+    });
   }, []);
 
   const setBinnenBuiten = useCallback((binnen_buiten: BinnenBuiten) => {
@@ -100,16 +113,17 @@ export function WizardProvider({
     setState((s) => ({ ...s, doel }));
   }, []);
 
-  const setLeeftijd = useCallback((leeftijd: LeeftijdCategorie) => {
-    setState((s) => ({ ...s, leeftijd }));
-  }, []);
-
   const setGeslacht = useCallback((geslacht: Geslacht) => {
     setState((s) => ({ ...s, geslacht }));
   }, []);
 
   const vorigeStap = useCallback(() => {
-    setState((s) => ({ ...s, stap: Math.max(initieSport ? 2 : 1, s.stap - 1) }));
+    setState((s) => {
+      const eersteStap = initieSport ? 2 : 1;
+      let vorige = s.stap - 1;
+      if (isAltijdBuiten(s.sport) && vorige === 5) vorige -= 1;
+      return { ...s, stap: Math.max(eersteStap, vorige) };
+    });
   }, [initieSport]);
 
   const volgendeStap = useCallback(() => {
@@ -138,7 +152,6 @@ export function WizardProvider({
         setFrequentie,
         setBinnenBuiten,
         setDoel,
-        setLeeftijd,
         setGeslacht,
         vorigeStap,
         volgendeStap,
