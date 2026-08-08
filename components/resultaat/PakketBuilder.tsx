@@ -217,7 +217,7 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
                     alt={product.naam}
                     sizes="40px"
                     className="object-contain p-1"
-                    fallbackClassName="text-sm opacity-30"
+                    compact
                   />
                 </div>
                 <div className="min-w-0 flex-1" title={product.uitleg ?? undefined}>
