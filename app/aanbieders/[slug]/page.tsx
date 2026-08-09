@@ -7,8 +7,14 @@ import { ProductAfbeelding } from "@/components/ProductAfbeelding";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sport?: string; categorie?: string; pagina?: string }>;
+  searchParams: Promise<{ sport?: string; categorie?: string; geslacht?: string; sorteer?: string; pagina?: string }>;
 }
+
+const SORTEER_OPTIES = [
+  { waarde: "relevantie", label: "Relevantie" },
+  { waarde: "prijs-op", label: "Prijs: laag - hoog" },
+  { waarde: "prijs-af", label: "Prijs: hoog - laag" },
+] as const;
 
 const PAGINA_GROOTTE = 40;
 const FACET_PAGINA_GROOTTE = 1000;
@@ -24,6 +30,7 @@ export async function generateMetadata({ params }: PageProps) {
 type FacetRij = {
   sport_id: string | null;
   category_id: string | null;
+  geslacht: string | null;
   sports: { naam: string; slug: string } | { naam: string; slug: string }[] | null;
   categories: { naam: string; slug: string } | { naam: string; slug: string }[] | null;
 };
@@ -39,11 +46,12 @@ type FacetRij = {
 async function haalProviderFacetten(supabase: Awaited<ReturnType<typeof createClient>>, providerId: string) {
   const sportTellingen = new Map<string, { naam: string; aantal: number }>();
   const categorieTellingen = new Map<string, { naam: string; aantal: number }>();
+  const geslachtTellingen = { man: 0, vrouw: 0 };
 
   for (let vanaf = 0; ; vanaf += FACET_PAGINA_GROOTTE) {
     const { data, error } = await supabase
       .from("products")
-      .select("sport_id, category_id, sports ( naam, slug ), categories ( naam, slug )")
+      .select("sport_id, category_id, geslacht, sports ( naam, slug ), categories ( naam, slug )")
       .eq("provider_id", providerId)
       .eq("actief", true)
       .order("id")
@@ -62,17 +70,20 @@ async function haalProviderFacetten(supabase: Awaited<ReturnType<typeof createCl
         const huidig = categorieTellingen.get(categorie.slug);
         categorieTellingen.set(categorie.slug, { naam: categorie.naam, aantal: (huidig?.aantal ?? 0) + 1 });
       }
+      if (rij.geslacht === "man") geslachtTellingen.man += 1;
+      if (rij.geslacht === "vrouw") geslachtTellingen.vrouw += 1;
     });
 
     if (data.length < FACET_PAGINA_GROOTTE) break;
   }
 
-  return { sportTellingen, categorieTellingen };
+  return { sportTellingen, categorieTellingen, geslachtTellingen };
 }
 
 export default async function AanbiederProductenPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const { sport: sportFilter, categorie: categorieFilter, pagina: paginaParam } = await searchParams;
+  const { sport: sportFilter, categorie: categorieFilter, geslacht: geslachtFilter, sorteer: sorteerParam, pagina: paginaParam } = await searchParams;
+  const sorteer = SORTEER_OPTIES.some((o) => o.waarde === sorteerParam) ? sorteerParam! : "relevantie";
   const supabase = await createClient();
 
   const { data: provider } = await supabase
@@ -92,8 +103,11 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
       categories ( naam, slug )
     `, { count: "exact" })
     .eq("provider_id", provider.id)
-    .eq("actief", true)
-    .order("score", { ascending: false });
+    .eq("actief", true);
+
+  if (sorteer === "prijs-op") query = query.order("prijs", { ascending: true });
+  else if (sorteer === "prijs-af") query = query.order("prijs", { ascending: false });
+  else query = query.order("score", { ascending: false });
 
   if (sportFilter) {
     const { data: sport } = await supabase.from("sports").select("id").eq("slug", sportFilter).single();
@@ -103,8 +117,11 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
     const { data: categorie } = await supabase.from("categories").select("id").eq("slug", categorieFilter).single();
     if (categorie) query = query.eq("category_id", categorie.id);
   }
+  if (geslachtFilter === "man" || geslachtFilter === "vrouw") {
+    query = query.eq("geslacht", geslachtFilter);
+  }
 
-  const [{ data: sporten }, { data: categorieen }, { sportTellingen, categorieTellingen }] = await Promise.all([
+  const [{ data: sporten }, { data: categorieen }, { sportTellingen, categorieTellingen, geslachtTellingen }] = await Promise.all([
     supabase.from("sports").select("naam, slug").eq("actief", true).order("volgorde"),
     supabase.from("categories").select("naam, slug").order("volgorde"),
     haalProviderFacetten(supabase, provider.id),
@@ -144,17 +161,26 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
             {totaalProducten} product{totaalProducten !== 1 ? "en" : ""} — bekijk direct, zonder de configurator te gebruiken.
           </p>
 
-          {/* Filter-link bouwt de query-string op met het andere actieve
-              filter behouden, zodat sport + categorie te combineren zijn.
-              Een filterwissel reset bewust de paginering. */}
+          {/* Filter-link bouwt de query-string op met de andere actieve
+              filters behouden, zodat sport + categorie + geslacht te
+              combineren zijn. Een filter- of sorteerwissel reset bewust
+              de paginering (nieuwe resultatenset = terug naar pagina 1). */}
           {(() => {
-            function filterHref(volgendeSport?: string, volgendeCategorie?: string) {
+            function hrefMet(overrides: { sport?: string; categorie?: string; geslacht?: string; sorteer?: string }) {
+              const waarden = {
+                sport: sportFilter, categorie: categorieFilter, geslacht: geslachtFilter, sorteer,
+                ...overrides,
+              };
               const params = new URLSearchParams();
-              if (volgendeSport) params.set("sport", volgendeSport);
-              if (volgendeCategorie) params.set("categorie", volgendeCategorie);
+              if (waarden.sport) params.set("sport", waarden.sport);
+              if (waarden.categorie) params.set("categorie", waarden.categorie);
+              if (waarden.geslacht) params.set("geslacht", waarden.geslacht);
+              if (waarden.sorteer && waarden.sorteer !== "relevantie") params.set("sorteer", waarden.sorteer);
               const query = params.toString();
               return `/aanbieders/${slug}${query ? `?${query}` : ""}`;
             }
+
+            const heeftGeslachtsfilter = geslachtTellingen.man > 0 || geslachtTellingen.vrouw > 0;
 
             return (
               <div className="space-y-3 mb-8">
@@ -164,9 +190,9 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                 {relevanteSporten.length > 1 && (
                   <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto sm:overflow-visible -mx-6 px-6 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
                     <Link
-                      href={filterHref()}
+                      href={hrefMet({ sport: undefined, categorie: undefined, geslacht: undefined })}
                       className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-                        !sportFilter && !categorieFilter ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
+                        !sportFilter && !categorieFilter && !geslachtFilter ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
                       }`}
                     >
                       Alles
@@ -174,7 +200,7 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                     {relevanteSporten.map((s) => (
                       <Link
                         key={s.slug}
-                        href={filterHref(sportFilter === s.slug ? undefined : s.slug, categorieFilter)}
+                        href={hrefMet({ sport: sportFilter === s.slug ? undefined : s.slug })}
                         className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
                           sportFilter === s.slug ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
                         }`}
@@ -189,7 +215,7 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                     {relevanteCategorieen.map((c) => (
                       <Link
                         key={c.slug}
-                        href={filterHref(sportFilter, categorieFilter === c.slug ? undefined : c.slug)}
+                        href={hrefMet({ categorie: categorieFilter === c.slug ? undefined : c.slug })}
                         className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
                           categorieFilter === c.slug ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
                         }`}
@@ -199,6 +225,55 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                     ))}
                   </div>
                 )}
+
+                {/* Los filter op geslacht en sortering — zoals bij een
+                    reguliere webshop, onafhankelijk van sport/categorie. */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2 border-t border-brand-border/60">
+                    {heeftGeslachtsfilter && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-brand-muted text-xs font-mono uppercase tracking-widest">Geslacht</span>
+                        <div className="flex flex-wrap gap-2">
+                          {geslachtTellingen.man > 0 && (
+                            <Link
+                              href={hrefMet({ geslacht: geslachtFilter === "man" ? undefined : "man" })}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+                                geslachtFilter === "man" ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
+                              }`}
+                            >
+                              Heren <span className="opacity-60">({geslachtTellingen.man})</span>
+                            </Link>
+                          )}
+                          {geslachtTellingen.vrouw > 0 && (
+                            <Link
+                              href={hrefMet({ geslacht: geslachtFilter === "vrouw" ? undefined : "vrouw" })}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+                                geslachtFilter === "vrouw" ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
+                              }`}
+                            >
+                              Dames <span className="opacity-60">({geslachtTellingen.vrouw})</span>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-brand-muted text-xs font-mono uppercase tracking-widest">Sorteren</span>
+                      <div className="flex flex-wrap gap-2">
+                        {SORTEER_OPTIES.map((o) => (
+                          <Link
+                            key={o.waarde}
+                            href={hrefMet({ sorteer: o.waarde })}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+                              sorteer === o.waarde ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
+                            }`}
+                          >
+                            {o.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
               </div>
             );
           })()}
@@ -241,6 +316,8 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                   const params = new URLSearchParams();
                   if (sportFilter) params.set("sport", sportFilter);
                   if (categorieFilter) params.set("categorie", categorieFilter);
+                  if (geslachtFilter) params.set("geslacht", geslachtFilter);
+                  if (sorteer !== "relevantie") params.set("sorteer", sorteer);
                   if (p > 1) params.set("pagina", String(p));
                   const query = params.toString();
                   return `/aanbieders/${slug}${query ? `?${query}` : ""}`;
