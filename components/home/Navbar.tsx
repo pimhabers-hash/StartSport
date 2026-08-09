@@ -15,6 +15,7 @@ export function Navbar() {
   ];
 
   return (
+    <>
     <header className="fixed top-0 inset-x-0 z-50 border-b border-brand-border/60 backdrop-blur-md bg-brand-black/80">
       <div className="max-w-7xl mx-auto px-6 lg:px-12 h-16 flex items-center justify-between">
         {/* Logo */}
@@ -57,22 +58,28 @@ export function Navbar() {
           </button>
         </div>
       </div>
-
-      {/* Mobiel uitklapmenu */}
-      {menuOpen && (
-        <nav className="md:hidden border-t border-brand-border/60 bg-brand-black/95 backdrop-blur-md px-6 py-4 flex flex-col gap-1">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMenuOpen(false)}
-              className="py-3 text-brand-ivory text-sm font-body border-b border-brand-border/40 last:border-0"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-      )}
     </header>
+
+    {/* Mobiel uitklapmenu — volledig scherm i.p.v. een klein
+        dropdownpaneel, zodat de paginainhoud er niet zichtbaar onderuit
+        blijft steken. Als sibling van <header> (niet erin genest) omdat
+        een position:fixed ouder anders het containing block wordt voor
+        deze geneste fixed-nav, waardoor top/bottom-offsets relatief aan
+        de (korte) header berekend worden i.p.v. aan het viewport. */}
+    {menuOpen && (
+      <nav className="md:hidden fixed inset-x-0 top-16 bottom-0 z-40 bg-brand-black px-6 py-8 flex flex-col gap-1 overflow-y-auto">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            onClick={() => setMenuOpen(false)}
+            className="py-4 text-brand-ivory text-lg font-body border-b border-brand-border/40 last:border-0"
+          >
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+    )}
+    </>
   );
 }

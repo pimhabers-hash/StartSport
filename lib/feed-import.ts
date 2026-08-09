@@ -205,6 +205,40 @@ export function bepaalBudgetklasse(
   return "premium";
 }
 
+/**
+ * Prijsgrenzen per categorie voor de budget/middenklasse/premium-indeling.
+ * Eén vaste grens per aanbieder (de oude aanpak, via feed_subscriptions.
+ * grens_budget/grens_midden) zou een racket van €150 en een grip van €150
+ * hetzelfde noemen — voor een racket is dat middenklasse, voor een grip
+ * absurd duur. Bepaald op basis van het 33e/66e prijspercentiel per
+ * categorie in de huidige catalogus, zodat elke categorie in ongeveer
+ * drie realistische, gelijke groepen uiteenvalt. Een categorie die hier
+ * niet in staat (nieuw, of nog zonder producten) valt terug op de
+ * grenzen van het feed-abonnement zelf — zie bepaalBudgetklasseVoorCategorie.
+ */
+export const CATEGORIE_BUDGET_GRENZEN: Record<string, { budget: number; midden: number }> = {
+  racket:                     { budget: 110, midden: 185 },
+  schoenen:                   { budget: 70,  midden: 110 },
+  tassen:                     { budget: 60,  midden: 100 },
+  kleding:                    { budget: 29,  midden: 48 },
+  ballen:                     { budget: 7,   midden: 18 },
+  accessoires:                { budget: 13,  midden: 20 },
+  bescherming:                { budget: 14,  midden: 21 },
+  voeding:                    { budget: 15,  midden: 30 },
+  "vitaminen-en-supplementen": { budget: 20, midden: 27 },
+};
+
+export function bepaalBudgetklasseVoorCategorie(
+  prijs: number,
+  categorieSlug: string | null,
+  fallbackGrensBudget: number,
+  fallbackGrensMidden: number
+): "budget" | "middenklasse" | "premium" {
+  const grenzen = categorieSlug ? CATEGORIE_BUDGET_GRENZEN[categorieSlug] : undefined;
+  if (grenzen) return bepaalBudgetklasse(prijs, grenzen.budget, grenzen.midden);
+  return bepaalBudgetklasse(prijs, fallbackGrensBudget, fallbackGrensMidden);
+}
+
 // Meertalige trefwoorden om geslacht uit een productnaam te herkennen.
 // Woordgrenzen zijn belangrijk: "men" mag niet matchen binnen "women".
 const GESLACHT_TREFWOORDEN: { geslacht: "man" | "vrouw"; patroon: RegExp }[] = [

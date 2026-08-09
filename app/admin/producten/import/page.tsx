@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { parseFeedBuffer, bepaalBudgetklasse, matchCategorie, detecteerGeslacht, schatNiveauEnFrequentie, type RuweFeedRij, type KolomHerkenning } from "@/lib/feed-import";
+import { parseFeedBuffer, bepaalBudgetklasseVoorCategorie, matchCategorie, detecteerGeslacht, schatNiveauEnFrequentie, type RuweFeedRij, type KolomHerkenning } from "@/lib/feed-import";
 import { haalAlleProducten } from "@/lib/product-fetch";
 import { matchSport } from "@/lib/sport-match";
 
@@ -121,8 +121,9 @@ export default function ImportPage() {
       if (rij.categorie_ruw && !categorieMapping[rij.categorie_ruw]) { overgeslagen++; continue; }
 
       const bestaand_id = (rij.ean && eanMap.get(rij.ean)) ?? naamMap.get(rij.naam.toLowerCase().trim());
-      const budgetklasse = bepaalBudgetklasse(prijsGetal, parseFloat(grensBudget), parseFloat(grensMidden));
       const category_id = rij.categorie_ruw ? categorieMapping[rij.categorie_ruw] : categorieen[0]?.id;
+      const categorieSlug = categorieen.find((c) => c.id === category_id)?.slug ?? null;
+      const budgetklasse = bepaalBudgetklasseVoorCategorie(prijsGetal, categorieSlug, parseFloat(grensBudget), parseFloat(grensMidden));
 
       if (bestaand_id) {
         const { error } = await supabase.from("products").update({
@@ -166,7 +167,9 @@ export default function ImportPage() {
   // niet bij grote bestanden (zoals een feed met 40.000+ producten).
   const alleRijenMetStatus = ruweRijen.map((r) => {
     const prijsGetal = parseFloat(r.prijs.replace(",", "."));
-    const budgetklasse = isNaN(prijsGetal) ? null : bepaalBudgetklasse(prijsGetal, parseFloat(grensBudget), parseFloat(grensMidden));
+    const gekoppeldeCategorieId = r.categorie_ruw ? categorieMapping[r.categorie_ruw] : categorieen[0]?.id;
+    const categorieSlug = categorieen.find((c) => c.id === gekoppeldeCategorieId)?.slug ?? null;
+    const budgetklasse = isNaN(prijsGetal) ? null : bepaalBudgetklasseVoorCategorie(prijsGetal, categorieSlug, parseFloat(grensBudget), parseFloat(grensMidden));
     const heeftFout = !r.naam || !r.prijs || !r.affiliate_url || isNaN(prijsGetal);
     const overgeslagen = !!(r.categorie_ruw && !categorieMapping[r.categorie_ruw]) && !heeftFout;
     return { ...r, budgetklasse, heeftFout, overgeslagen };

@@ -55,6 +55,10 @@ export interface ConfiguratorResultaat {
   alternatief_premium: PakketProduct[];
 }
 
+// Volgorde van budgetklassen — bepaalt welke twee klassen "naast elkaar"
+// liggen voor het gedeeltelijke budget_naast-krediet hieronder.
+const BUDGET_VOLGORDE: BudgetKlasse[] = ["budget", "middenklasse", "premium"];
+
 // ─── Scoring gewichten ────────────────────────────────────────
 const GEWICHT = {
   niveau:        40,
@@ -144,6 +148,22 @@ function productHoortBijSport(product: ProductMatcher, sportId: string): boolean
   return product.sport_id === null && UNIVERSELE_CATEGORIEEN.includes(product.category.slug);
 }
 
+/**
+ * True als een product past bij de opgegeven geslachtsvoorkeur. Bij een
+ * expliciete "man"/"vrouw"-keuze is dit een harde uitsluiting: een klant
+ * die "Man" kiest, krijgt nooit een product te zien dat expliciet als
+ * "vrouw" herkend is (en andersom) — ook niet als alternatief om uit te
+ * kiezen. Unisex/onbekende producten (geen duidelijk geslacht in de
+ * naam) passen altijd, voor iedereen. Zonder voorkeur ("anders" of niet
+ * ingevuld) wordt niets uitgesloten — de zachte scoring-bonus in
+ * berekenMatchScore zorgt daar voor een lichte, eerlijke voorkeur.
+ */
+function productPastBijGeslacht(product: ProductMatcher, geslacht?: "man" | "vrouw" | "anders"): boolean {
+  if (geslacht !== "man" && geslacht !== "vrouw") return true;
+  if (!product.geslacht || product.geslacht === "unisex") return true;
+  return product.geslacht === geslacht;
+}
+
 function berekenMatchScore(
   product: ProductMatcher,
   input: ConfiguratorInput
@@ -155,12 +175,14 @@ function berekenMatchScore(
     score += GEWICHT.niveau;
   }
 
-  // 2. Budget
+  // 2. Budget — een aanpalende klasse (bijv. middenklasse voor wie
+  // premium koos) krijgt gedeeltelijk krediet, symmetrisch in beide
+  // richtingen. Alleen budget↔premium (twee klassen uit elkaar) krijgt
+  // niets, want dat is geen realistisch alternatief.
   if (product.budgetklasse === input.budgetklasse) {
     score += GEWICHT.budget_exact;
   } else if (
-    (input.budgetklasse === "middenklasse" && product.budgetklasse === "budget") ||
-    (input.budgetklasse === "middenklasse" && product.budgetklasse === "premium")
+    Math.abs(BUDGET_VOLGORDE.indexOf(input.budgetklasse) - BUDGET_VOLGORDE.indexOf(product.budgetklasse)) === 1
   ) {
     score += GEWICHT.budget_naast;
   }
@@ -252,8 +274,8 @@ export function groepeerPerCategorieMetOpties(
   // Alleen producten die daadwerkelijk bij deze sport horen — voorkomt
   // dat universele producten (sport_id null, bijv. uit een brede feed
   // zonder vaste sport) voor élke sport meetellen.
-  const relevanteProducten = alleProducten.filter((p) =>
-    productHoortBijSport(p, input.sport_id)
+  const relevanteProducten = alleProducten.filter(
+    (p) => productHoortBijSport(p, input.sport_id) && productPastBijGeslacht(p, input.geslacht)
   );
 
   const gescoord: PakketProduct[] = relevanteProducten.map((p) => ({
@@ -288,7 +310,7 @@ function berekenAlternatief(
   if (budgetOverride === input.budgetklasse) return [];
   const aangepast = { ...input, budgetklasse: budgetOverride };
   const gescoord = alleProducten
-    .filter((p) => p.budgetklasse === budgetOverride)
+    .filter((p) => p.budgetklasse === budgetOverride && productPastBijGeslacht(p, input.geslacht))
     .map((p) => ({ ...p, match_score: berekenMatchScore(p, aangepast) }))
     .sort((a, b) => b.match_score - a.match_score);
   return selecteerPerCategorie(gescoord);
@@ -298,10 +320,12 @@ export function berekenPakket(
   alleProducten: ProductMatcher[],
   input: ConfiguratorInput
 ): ConfiguratorResultaat {
-  const gescoord: PakketProduct[] = alleProducten.map((p) => ({
-    ...p,
-    match_score: berekenMatchScore(p, input),
-  }));
+  const gescoord: PakketProduct[] = alleProducten
+    .filter((p) => productPastBijGeslacht(p, input.geslacht))
+    .map((p) => ({
+      ...p,
+      match_score: berekenMatchScore(p, input),
+    }));
   gescoord.sort((a, b) => b.match_score - a.match_score);
 
   const producten = selecteerPerCategorie(gescoord);
