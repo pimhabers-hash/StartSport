@@ -41,12 +41,27 @@ export default async function SportHubPage({ params }: PageProps) {
       .order("created_at", { ascending: false }),
     supabase
       .from("products")
-      .select("id, naam, merk, prijs, afbeelding_url, categories ( naam )")
+      .select("id, naam, merk, prijs, afbeelding_url, categories ( id, naam )")
       .or(`sport_id.eq.${sport.id},sport_id.is.null`)
       .eq("actief", true)
       .order("score", { ascending: false })
-      .limit(6),
+      .limit(60),
   ]);
+
+  // De score is voor bijna alle producten gelijk (standaard 4.0 bij import),
+  // dus "top 6 op score" pakte in de praktijk gewoon de eerste 6 uit welke
+  // categorie toevallig het grootst is (bijna altijd Kleding) — een
+  // padel-hub liet zo bijvoorbeeld nooit een racket zien. In plaats daarvan:
+  // per categorie het best scorende product, zodat de sectie de sport
+  // representatief laat zien i.p.v. willekeurig één producttype.
+  const productenPerCategorie = new Map<string, NonNullable<typeof producten>[number]>();
+  (producten ?? []).forEach((p) => {
+    const catId = Array.isArray(p.categories) ? p.categories[0]?.id : (p.categories as { id: string } | null)?.id;
+    if (catId && !productenPerCategorie.has(catId)) {
+      productenPerCategorie.set(catId, p);
+    }
+  });
+  const uitgelichteProducten = Array.from(productenPerCategorie.values()).slice(0, 6);
 
   // Breadcrumb structured data — helpt Google de sitehiërarchie te begrijpen
   const breadcrumbSchema = {
@@ -116,13 +131,13 @@ export default async function SportHubPage({ params }: PageProps) {
           )}
 
           {/* Populaire producten */}
-          {producten && producten.length > 0 && (
+          {uitgelichteProducten.length > 0 && (
             <section>
               <h2 className="font-display text-2xl text-brand-ivory mb-6">
                 Populaire {sport.naam.toLowerCase()}-producten
               </h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {producten.map((product) => {
+                {uitgelichteProducten.map((product) => {
                   const categorieNaam = Array.isArray(product.categories)
                     ? product.categories[0]?.naam
                     : (product.categories as { naam: string } | null)?.naam;
@@ -144,7 +159,7 @@ export default async function SportHubPage({ params }: PageProps) {
             </section>
           )}
 
-          {(!artikelen || artikelen.length === 0) && (!producten || producten.length === 0) && (
+          {(!artikelen || artikelen.length === 0) && uitgelichteProducten.length === 0 && (
             <p className="text-brand-muted font-body text-sm">
               Binnenkort verschijnt hier meer content voor {sport.naam}.
             </p>
