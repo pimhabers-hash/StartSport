@@ -88,19 +88,22 @@ export const DOEL_CATEGORIE_HINTS: Record<Doel, string[]> = {
 /**
  * Categorieën die voor élke sport zinnig zijn, ook zonder dat een
  * product aan een specifieke sport gekoppeld is — voeding hoort nergens
- * exclusief bij. Kleding/tassen/accessoires (algemene trainingskleding,
- * sporttassen, grips/sokken/caps e.d.) horen hier ook bij: dat zijn
- * generieke, functioneel sportonafhankelijke producttypes, in
- * tegenstelling tot schoenen/racket/ballen/bescherming — dáár verschilt
- * het ontwerp juist wél per sport (een hardloopschoen of scheenbeschermer
- * hoort niet zomaar in een Padel-pakket), dus die blijven alleen
- * meetellen als er wél een sport gekoppeld is. Relevant vooral voor
- * brede multisport-aanbieders (bijv. Training Fit) waarvan de meeste
- * producten geen aparte sport vermelden — zonder deze uitzondering zou
- * al hun kleding/tassen/accessoires nergens in de configurator
- * verschijnen, ook al is het prima bruikbaar voor elke sport.
+ * exclusief bij. Kleding/tassen (algemene trainingskleding, sporttassen)
+ * horen hier ook bij: dat zijn generieke, functioneel sportonafhankelijke
+ * producttypes. "Accessoires" hoort hier expliciet NIET bij: die
+ * categorie blijkt bij een steekproef ook oneigenlijke producten te
+ * bevatten die alleen via een toevallige trefwoordmatch (bijv. "grip")
+ * als accessoire zijn herkend — zoals paardrijstijgbeugels — en die
+ * zouden bij een universele behandeling voor élke sport kunnen
+ * verschijnen. Net als schoenen/racket/ballen/bescherming blijft
+ * accessoires daarom alleen meetellen als er wél een sport gekoppeld is.
+ * Relevant vooral voor brede multisport-aanbieders (bijv. Training Fit)
+ * waarvan de meeste producten geen aparte sport vermelden — zonder deze
+ * uitzondering voor kleding/tassen zou al hun kleding/sporttassen
+ * nergens in de configurator verschijnen, ook al is het prima bruikbaar
+ * voor elke sport.
  */
-const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen", "kleding", "tassen", "accessoires"];
+const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen", "kleding", "tassen"];
 
 /**
  * Categorieën waarbij een klant logischerwijs nul, één, of meerdere

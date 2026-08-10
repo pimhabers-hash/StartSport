@@ -30,6 +30,21 @@ const SPORT_TREFWOORDEN: Record<string, string[]> = {
   voetbal:    ["voetbal", "football", "soccer", "voetbalschoen"],
   wandelen:   ["wandelen", "wandel", "hiking", "hike", "trekking", "nordic walking", "walking pole"],
   wintersport: ["wintersport", "ski", "skiën", "snowboard", "ski touring", "skitour"],
+  // Losse woorden ("boksen", "kickboksen") én de meestvoorkomende
+  // samengestelde productnamen expliciet — in het Nederlands plakken die
+  // vast aan elkaar ("bokshandschoenen", "boksschoenen"), waardoor het
+  // woord "boks" er middenin geen eigen woordgrens heeft en dus niet zou
+  // matchen via het gewone \bwoord\b-patroon.
+  boksen: [
+    "boksen", "kickboksen", "thaiboksen", "boks", "kickboks", "thaiboks",
+    "boksbroek", "boksbroeken", "kickboksbroek", "thaiboksbroek",
+    "boksershandschoenen", "bokshandschoenen", "kickbokshandschoenen",
+    "thaibokshandschoenen", "kinderbokshandschoenen", "minibokshandschoenen",
+    "bokstrainingshandschoenen", "boksersweater", "bokshelm",
+    "boksschoenen", "kickboksschoenen", "multiboksschoenen",
+    "boksschopbroek", "boksshorts", "thaiboksshort", "thaiboksshorts",
+    "bokstraining", "bokszak",
+  ],
 };
 
 /**
