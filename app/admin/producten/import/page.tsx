@@ -143,7 +143,7 @@ export default function ImportPage() {
           provider_id: providerId || null,
           prijs: prijsGetal,
           budgetklasse,
-          geslacht: detecteerGeslacht(rij.naam),
+          geslacht: detecteerGeslacht(rij.naam, rij.categorie_ruw),
           affiliate_url: rij.affiliate_url,
           afbeelding_url: rij.afbeelding_url || null,
           ean: rij.ean || null,

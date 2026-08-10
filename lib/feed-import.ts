@@ -247,13 +247,20 @@ const GESLACHT_TREFWOORDEN: { geslacht: "man" | "vrouw"; patroon: RegExp }[] = [
 ];
 
 /**
- * Probeert het geslacht (man/vrouw/unisex) uit een productnaam te
- * herkennen. Belangrijk: "vrouw" wordt eerst gecheckt, omdat "women"
- * anders per ongeluk zou matchen op het "men"-patroon.
+ * Probeert het geslacht (man/vrouw/unisex) te herkennen uit de
+ * productnaam, met de ruwe feed-categorie als extra bron. Belangrijk:
+ * "vrouw" wordt eerst gecheckt, omdat "women" anders per ongeluk zou
+ * matchen op het "men"-patroon. De categorie is nodig omdat sommige
+ * aanbieders (bijv. Training Fit, een Awin-feed met Franse
+ * categorietaxonomie) het geslacht nauwelijks in de productnaam zelf
+ * vermelden ("Damesbeha", geen "Homme"/"Femme"), maar wel betrouwbaar in
+ * elke categorie ("Multisports > Brassière > Adulte > Femme") — zonder
+ * die extra bron zou zo'n feed bijna alles als "unisex" registreren.
  */
-export function detecteerGeslacht(naam: string): "man" | "vrouw" | "unisex" {
+export function detecteerGeslacht(naam: string, categorieRuw: string = ""): "man" | "vrouw" | "unisex" {
+  const tekst = `${naam} ${categorieRuw}`;
   for (const { geslacht, patroon } of GESLACHT_TREFWOORDEN) {
-    if (patroon.test(naam)) return geslacht;
+    if (patroon.test(tekst)) return geslacht;
   }
   return "unisex";
 }
@@ -286,20 +293,21 @@ export function schatNiveauEnFrequentie(budgetklasse: "budget" | "middenklasse" 
 // Nederlandse namen hebben.
 const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   racket:       ["racket", "raquet", "raqueta", "pala", "paddle", "racquet"],
-  schoenen:     ["schoen", "schoenen", "shoe", "zapatilla", "calzado", "footwear"],
+  schoenen:     ["schoen", "schoenen", "shoe", "zapatilla", "calzado", "footwear", "chaussure"],
   ballen:       ["bal", "ballen", "ball", "bola", "pelota"],
   tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack"],
   kleding:      [
     "kleding", "cloth", "clothing", "apparel", "ropa", "camiseta", "textil",
-    "shirt", "tshirt", "t-shirt",
+    "shirt", "tshirt", "t-shirt", "maillot",
     "short", "pant", "pantalon", "trouser", "broek", "jogbroek",
-    "jacket", "chaqueta",
-    "sweat", "sweater", "sweatshirt", "hoodie", "hooded", "sudadera",
+    "jacket", "chaqueta", "veste",
+    "sweat", "sweater", "sweatshirt", "hoodie", "hooded", "sudadera", "polaire", "fleece",
     "polo", "tank", "skirt", "falda", "dress", "vestido",
+    "legging", "brassiere", "beha", "bra",
   ],
-  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "cap", "gorra", "strip", "hoes", "cover", "funda"],
+  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "chaussette", "sok", "sokken", "cap", "gorra", "strip", "hoes", "cover", "funda"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
-  bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector"],
+  bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector", "gant", "handschoen"],
   "vitaminen-en-supplementen": [
     "vitamine", "vitaminen", "vitamin", "supplement", "mineraal", "mineral",
     "capsule", "capsul", "gummies", "collageen", "collagen",

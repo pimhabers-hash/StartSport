@@ -87,12 +87,20 @@ export const DOEL_CATEGORIE_HINTS: Record<Doel, string[]> = {
 
 /**
  * Categorieën die voor élke sport zinnig zijn, ook zonder dat een
- * product aan een specifieke sport gekoppeld is (bijv. een
- * voedingssupplement of een universeel drinkflesje) — voeding hoort
- * nergens exclusief bij, dus die mag altijd meetellen als "universeel"
- * product (sport_id null).
+ * product aan een specifieke sport gekoppeld is — voeding hoort nergens
+ * exclusief bij. Kleding/tassen/accessoires (algemene trainingskleding,
+ * sporttassen, grips/sokken/caps e.d.) horen hier ook bij: dat zijn
+ * generieke, functioneel sportonafhankelijke producttypes, in
+ * tegenstelling tot schoenen/racket/ballen/bescherming — dáár verschilt
+ * het ontwerp juist wél per sport (een hardloopschoen of scheenbeschermer
+ * hoort niet zomaar in een Padel-pakket), dus die blijven alleen
+ * meetellen als er wél een sport gekoppeld is. Relevant vooral voor
+ * brede multisport-aanbieders (bijv. Training Fit) waarvan de meeste
+ * producten geen aparte sport vermelden — zonder deze uitzondering zou
+ * al hun kleding/tassen/accessoires nergens in de configurator
+ * verschijnen, ook al is het prima bruikbaar voor elke sport.
  */
-const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen"];
+const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen", "kleding", "tassen", "accessoires"];
 
 /**
  * Categorieën waarbij een klant logischerwijs nul, één, of meerdere
@@ -136,9 +144,9 @@ function sorteerOpCategorieVolgorde<T extends { category: { naam: string; slug: 
  * product telt alleen mee als het óf expliciet aan déze sport gekoppeld
  * is, óf universeel is (sport_id null) én in een sportonafhankelijke
  * categorie zit. Zonder deze check zou een universeel product (sport_id
- * null, bijv. uit een brede feed als Sportsprofi zonder vaste sport)
- * voor élke sport meetellen — een ijshockeyschoen of mudguard hoort dan
- * alsnog niet thuis in een Fitness- of Padel-pakket, ook al is
+ * null, bijv. uit een brede multisport-feed zonder vaste sport per rij)
+ * voor élke sport meetellen — een hardloopschoen of scheenbeschermer hoort
+ * dan alsnog niet thuis in een Fitness- of Padel-pakket, ook al is
  * "Schoenen"/"Bescherming" op zich een geldige categorie. Producten die
  * hierdoor nergens matchen, blijven gewoon zichtbaar op de
  * aanbiederspagina — die filtert niet op sport.
