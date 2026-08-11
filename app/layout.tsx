@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="nl">
-      <body className="min-h-screen bg-white text-gray-900 antialiased">
+      <body className="min-h-screen bg-brand-black text-brand-ivory antialiased">
         {children}
         <CookieBanner />
         <GoogleAnalytics />
