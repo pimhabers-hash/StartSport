@@ -5,7 +5,7 @@ const ALIASSEN: Record<string, string[]> = {
   merk:           ["merk", "brandname", "brand"],
   prijs:          ["prijs", "searchprice", "displayprice", "storeprice", "price", "baseprice"],
   affiliate_url:  ["affiliateurl", "awdeeplink", "merchantdeeplink", "deeplink", "url", "basketlink"],
-  afbeelding_url: ["imagedefault", "afbeeldingurl", "merchantimageurl", "awimageurl", "largeimage", "afbeelding", "merchantthumburl"],
+  afbeelding_url: ["imagedefault", "imageurl", "image", "afbeeldingurl", "merchantimageurl", "awimageurl", "largeimage", "afbeelding", "merchantthumburl"],
   ean:            ["ean", "productgtin", "gtin"],
   categorie_ruw:  ["categorie", "merchantcategory", "categoryname", "merchantproductcategorypath"],
   // Sommige feeds (bijv. Daisycon-standaard) leveren een schoon
@@ -66,7 +66,15 @@ function vindKolom(headers: string[], veld: string): { index: number; header: st
   }
 
   // Poging 2 (vangnet): gedeeltelijke match — vangt varianten op zoals
-  // "aw product name" of kolommen met een extra prefix/suffix.
+  // "aw product name" of kolommen met een extra prefix/suffix (bijv.
+  // "link" matcht dan alsnog de alias "deeplink"). Let op: dit is
+  // bewust een brede match — een expliciete Poging-1-alias (zoals
+  // "imageurl" hierboven bij afbeelding_url) is de juiste manier om een
+  // veld dat hier per ongeluk aan een verkeerde, kortere kolom zou
+  // plakken (zoals ooit "url") alsnog voorrang te geven, in plaats van
+  // Poging 2 zelf strenger te maken — dat brak eerder de matching van
+  // andere feeds waar een korte kolomnaam (zoals "link") wél terecht
+  // via een langere alias gevonden moest worden.
   for (const naam of mogelijkeNamen) {
     const genorm = normaliseer(naam);
     const idx = genormaliseerdeHeaders.findIndex((h) => h.includes(genorm) || genorm.includes(h));
@@ -124,11 +132,26 @@ function rijenUitTabel(rows: unknown[][]): { rijen: RuweFeedRij[]; herkenning: K
     herkenning.push({ veld, gevondenHeader: header });
   });
 
+  // Extra, optionele categorie-verrijking: sommige feeds (bijv. Decathlon)
+  // splitsen de categorie op in aparte, veel specifiekere kolommen
+  // ("subcategories", "subsubcategories") náást het brede hoofdveld dat
+  // via categorie_ruw hierboven al gevonden is. Dat hoofdveld ("Wandelen",
+  // "Zwemmen") is prima voor sport-herkenning, maar zegt niets over het
+  // producttype (schoen/tas/kleding) — dat staat wél in deze kolommen
+  // ("Zwemkleding > Sport zwemkleding dames"). Geen aparte alias-entry
+  // hiervoor (dat zou categorie_ruw dubbel maken), gewoon een directe
+  // kolomzoektocht op exacte naam, en de waarden aan categorie_ruw plakken.
+  const genormaliseerdeHeaders = headers.map(normaliseer);
+  const extraCategorieKolommen = ["subcategories", "subsubcategories"]
+    .map((naam) => genormaliseerdeHeaders.indexOf(naam))
+    .filter((idx) => idx !== -1);
+
   const resultaat: RuweFeedRij[] = [];
   for (let i = 1; i < rows.length; i++) {
     const rij = rows[i];
     if (!rij || rij.length === 0) continue;
     const lees = (idx: number) => (idx >= 0 && rij[idx] != null ? String(rij[idx]).trim() : "");
+    const categorieDelen = [lees(kolomIndex.categorie_ruw), ...extraCategorieKolommen.map(lees)].filter(Boolean);
     resultaat.push({
       naam: lees(kolomIndex.naam),
       merk: lees(kolomIndex.merk),
@@ -136,7 +159,7 @@ function rijenUitTabel(rows: unknown[][]): { rijen: RuweFeedRij[]; herkenning: K
       affiliate_url: lees(kolomIndex.affiliate_url),
       afbeelding_url: opschonenAfbeeldingUrl(lees(kolomIndex.afbeelding_url)),
       ean: lees(kolomIndex.ean),
-      categorie_ruw: lees(kolomIndex.categorie_ruw),
+      categorie_ruw: categorieDelen.join(" "),
       geslacht_ruw: lees(kolomIndex.geslacht_ruw),
     });
   }
@@ -239,6 +262,12 @@ export const CATEGORIE_BUDGET_GRENZEN: Record<string, { budget: number; midden: 
   accessoires:                { budget: 13,  midden: 20 },
   bescherming:                { budget: 14,  midden: 21 },
   voeding:                    { budget: 15,  midden: 30 },
+  // Boards en fietsen: nog geen eigen catalogus om percentielen op te
+  // baseren, dus een grove inschatting op basis van typische prijzen
+  // (een skateboard/basic SUP tegenover een surfboard, resp. een los
+  // onderdeel tegenover een complete race-/mountainbike).
+  boards:                     { budget: 80,  midden: 250 },
+  "fietsen-categorie":        { budget: 100, midden: 400 },
   "vitaminen-en-supplementen": { budget: 20, midden: 27 },
 };
 
@@ -333,7 +362,7 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   // prijsklasse, dus een eigen categorie i.p.v. meeliften op racket.
   clubs:        ["stok", "stokken"],
   sticks:       ["hockeystick"],
-  schoenen:     ["schoen", "schoenen", "shoe", "zapatilla", "calzado", "footwear", "chaussure"],
+  schoenen:     ["schoen", "schoenen", "shoe", "zapatilla", "calzado", "footwear", "chaussure", "strandschoenen", "turnschoenen", "teenslippers", "slippers"],
   ballen:       ["bal", "ballen", "ball", "bola", "pelota"],
   tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack", "stickbag", "cartbag", "standbag"],
   kleding:      [
@@ -344,15 +373,27 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
     "sweat", "sweater", "sweatshirt", "hoodie", "hooded", "sudadera", "polaire", "fleece",
     "polo", "tank", "skirt", "falda", "dress", "vestido", "skort",
     "legging", "brassiere", "beha", "bra",
+    // Samengestelde Nederlandse woorden — "kleding" heeft er middenin
+    // geen eigen woordgrens (zelfde probleem als eerder bij "boks..."),
+    // dus expliciet de vormen die in de praktijk veel voorkomen.
+    "badkleding", "zwemkleding", "strandkleding", "surfkleding", "turnkleding",
+    "zonbescherming", "turnpakje", "turnpakjes", "wetsuit", "boardshort", "boardshorts",
   ],
   accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "chaussette", "sok", "sokken", "cap", "gorra", "strip", "hoes", "cover", "funda", "taskar", "taskarren", "tasaccessoire", "tasaccessoires"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
-  bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector", "gant", "handschoen", "glove", "shinguard", "scheenbeschermer"],
+  bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector", "gant", "handschoen", "glove", "shinguard", "scheenbeschermer", "helm"],
   "vitaminen-en-supplementen": [
     "vitamine", "vitaminen", "vitamin", "supplement", "mineraal", "mineral",
     "capsule", "capsul", "gummies", "collageen", "collagen",
     "magnesium", "creatine", "ashwagandha", "probiotica", "probiotic",
   ],
+  // "Boards" bundelt surf-/SUP-/skate-/snowboards — één categorie i.p.v.
+  // vier bijna-lege losse categorieën voor vergelijkbare platte planken.
+  boards:       ["skateboard", "surfboard", "supboard", "wakeboard", "snowboard", "surfplank", "bodyboard"],
+  // De fiets zelf en fietsonderdelen (frame, wielen, aandrijving) — te
+  // uiteenlopend qua onderdeeltype om los te splitsen, dus één brede
+  // categorie voor "dit heeft met de fiets zelf te maken".
+  "fietsen-categorie": ["racefiets", "mountainbike", "mtb", "stadsfiets", "kinderfiets"],
 };
 
 // Sportnamen die in Nederlandse feeds vaak aan het zelfstandig naamwoord
@@ -360,7 +401,10 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
 // "padelballen") — anders dan de meeste Engelse/Spaanse feeds ("padel
 // bag", "padel racket"). Woordgrens-matching herkent de trefwoorden dan
 // niet meer omdat ze middenin een aaneengeschreven woord zitten.
-const SPORT_VOORVOEGSELS = ["padel", "tennis", "voetbal", "volleybal", "hockey", "hardloop", "fitness", "pickleball", "basketbal", "golf", "boks", "kickboks", "thaiboks"];
+const SPORT_VOORVOEGSELS = [
+  "padel", "tennis", "voetbal", "volleybal", "hockey", "hardloop", "fitness", "pickleball", "basketbal", "golf", "boks", "kickboks", "thaiboks",
+  "zwem", "fiets", "badminton", "tafeltennis", "handbal", "klim", "duik", "skateboard", "trampoline", "surf", "paardrijd",
+];
 
 /**
  * Knipt bekende sportnaam-voorvoegsels los van wat erna komt (bijv.
@@ -396,7 +440,7 @@ function bevatAlsWoord(tekst: string, trefwoord: string): boolean {
 // (dat beschrijft alleen waar de tas voor bedoeld is). Door "tassen" en
 // "schoenen" vóór "racket" te checken, wint de juiste, specifiekere
 // categorie in plaats van het eerst-gevonden woord.
-const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "kleding", "ballen", "vitaminen-en-supplementen", "accessoires", "voeding", "bescherming", "racket", "clubs", "sticks"];
+const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "kleding", "ballen", "vitaminen-en-supplementen", "accessoires", "voeding", "bescherming", "racket", "clubs", "sticks", "boards", "fietsen-categorie"];
 
 export function matchCategorie(
   ruweTekst: string,
