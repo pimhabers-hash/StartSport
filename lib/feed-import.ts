@@ -8,6 +8,11 @@ const ALIASSEN: Record<string, string[]> = {
   afbeelding_url: ["imagedefault", "afbeeldingurl", "merchantimageurl", "awimageurl", "largeimage", "afbeelding", "merchantthumburl"],
   ean:            ["ean", "productgtin", "gtin"],
   categorie_ruw:  ["categorie", "merchantcategory", "categoryname", "merchantproductcategorypath"],
+  // Sommige feeds (bijv. Daisycon-standaard) leveren een schoon
+  // "gender_target"-veld (male/female/unisex) — betrouwbaarder dan
+  // gokken op basis van de productnaam. Optioneel: feeds zonder dit veld
+  // vallen gewoon terug op de bestaande naam/categorie-detectie.
+  geslacht_ruw:   ["gendertarget", "gender", "geslacht", "targetgender"],
 };
 
 export interface RuweFeedRij {
@@ -18,6 +23,7 @@ export interface RuweFeedRij {
   afbeelding_url: string;
   ean: string;
   categorie_ruw: string;
+  geslacht_ruw: string;
 }
 
 export interface KolomHerkenning {
@@ -108,7 +114,7 @@ function rijenUitTabel(rows: unknown[][]): { rijen: RuweFeedRij[]; herkenning: K
   if (rows.length < 2) return { rijen: [], herkenning: [], ruweHeaders: [] };
   const headers = rows[0].map((h) => String(h ?? ""));
 
-  const velden = ["naam", "merk", "prijs", "affiliate_url", "afbeelding_url", "ean", "categorie_ruw"];
+  const velden = ["naam", "merk", "prijs", "affiliate_url", "afbeelding_url", "ean", "categorie_ruw", "geslacht_ruw"];
   const kolomIndex: Record<string, number> = {};
   const herkenning: KolomHerkenning[] = [];
 
@@ -131,6 +137,7 @@ function rijenUitTabel(rows: unknown[][]): { rijen: RuweFeedRij[]; herkenning: K
       afbeelding_url: opschonenAfbeeldingUrl(lees(kolomIndex.afbeelding_url)),
       ean: lees(kolomIndex.ean),
       categorie_ruw: lees(kolomIndex.categorie_ruw),
+      geslacht_ruw: lees(kolomIndex.geslacht_ruw),
     });
   }
   return { rijen: resultaat, herkenning, ruweHeaders: headers };
@@ -241,23 +248,44 @@ export function bepaalBudgetklasseVoorCategorie(
 
 // Meertalige trefwoorden om geslacht uit een productnaam te herkennen.
 // Woordgrenzen zijn belangrijk: "men" mag niet matchen binnen "women".
+// "mens"/"womens" apart erbij omdat het Engelse bezits-s ("Mens Shoe",
+// "Womens Jacket") anders geen eigen woordgrens rond "men"/"women" heeft.
 const GESLACHT_TREFWOORDEN: { geslacht: "man" | "vrouw"; patroon: RegExp }[] = [
-  { geslacht: "vrouw", patroon: /\b(women|woman|dames|damen|mujer|femme|female|ladies)\b/i },
-  { geslacht: "man",   patroon: /\b(men|heren|herren|hombre|homme|male)\b/i },
+  { geslacht: "vrouw", patroon: /\b(women|womens|woman|dames|damen|mujer|femme|female|ladies)\b/i },
+  { geslacht: "man",   patroon: /\b(men|mens|heren|herren|hombre|homme|male)\b/i },
 ];
 
 /**
- * Probeert het geslacht (man/vrouw/unisex) te herkennen uit de
- * productnaam, met de ruwe feed-categorie als extra bron. Belangrijk:
- * "vrouw" wordt eerst gecheckt, omdat "women" anders per ongeluk zou
- * matchen op het "men"-patroon. De categorie is nodig omdat sommige
- * aanbieders (bijv. Training Fit, een Awin-feed met Franse
+ * Herkent letterlijke waarden uit een schoon "gender_target"-veld dat
+ * sommige feeds standaard meeleveren (bijv. Daisycon: male/female/
+ * unisex) — betrouwbaarder dan tekst gokken, dus deze bron krijgt
+ * voorrang in detecteerGeslacht hieronder wanneer aanwezig.
+ */
+function mapGeslachtVeld(ruw: string): "man" | "vrouw" | "unisex" | null {
+  const waarde = ruw.trim().toLowerCase();
+  if (["male", "man", "men", "heren", "boy", "boys"].includes(waarde)) return "man";
+  if (["female", "vrouw", "women", "dames", "girl", "girls"].includes(waarde)) return "vrouw";
+  if (["unisex", "mixed", "kids", "kid", "children", "onbekend", ""].includes(waarde)) return "unisex";
+  return null;
+}
+
+/**
+ * Probeert het geslacht (man/vrouw/unisex) te bepalen. Volgorde van
+ * betrouwbaarheid: eerst een schoon gender_target-veld als de feed dat
+ * meelevert, anders de productnaam, met de ruwe feed-categorie als extra
+ * bron. "vrouw" wordt vóór "man" gecheckt, omdat "women" anders per
+ * ongeluk zou matchen op het "men"-patroon. De categorie is nodig omdat
+ * sommige aanbieders (bijv. Training Fit, een Awin-feed met Franse
  * categorietaxonomie) het geslacht nauwelijks in de productnaam zelf
  * vermelden ("Damesbeha", geen "Homme"/"Femme"), maar wel betrouwbaar in
  * elke categorie ("Multisports > Brassière > Adulte > Femme") — zonder
  * die extra bron zou zo'n feed bijna alles als "unisex" registreren.
  */
-export function detecteerGeslacht(naam: string, categorieRuw: string = ""): "man" | "vrouw" | "unisex" {
+export function detecteerGeslacht(naam: string, categorieRuw: string = "", geslachtVeld: string = ""): "man" | "vrouw" | "unisex" {
+  if (geslachtVeld) {
+    const uitVeld = mapGeslachtVeld(geslachtVeld);
+    if (uitVeld) return uitVeld;
+  }
   const tekst = `${naam} ${categorieRuw}`;
   for (const { geslacht, patroon } of GESLACHT_TREFWOORDEN) {
     if (patroon.test(tekst)) return geslacht;
@@ -292,22 +320,22 @@ export function schatNiveauEnFrequentie(budgetklasse: "budget" | "middenklasse" 
 // levert Spaanstalige productdata), terwijl onze eigen categorieën
 // Nederlandse namen hebben.
 const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
-  racket:       ["racket", "raquet", "raqueta", "pala", "paddle", "racquet"],
+  racket:       ["racket", "raquet", "raqueta", "pala", "paddle", "racquet", "stok", "stokken"],
   schoenen:     ["schoen", "schoenen", "shoe", "zapatilla", "calzado", "footwear", "chaussure"],
   ballen:       ["bal", "ballen", "ball", "bola", "pelota"],
-  tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack"],
+  tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack", "stickbag", "cartbag", "standbag"],
   kleding:      [
     "kleding", "cloth", "clothing", "apparel", "ropa", "camiseta", "textil",
     "shirt", "tshirt", "t-shirt", "maillot",
     "short", "pant", "pantalon", "trouser", "broek", "jogbroek",
     "jacket", "chaqueta", "veste",
     "sweat", "sweater", "sweatshirt", "hoodie", "hooded", "sudadera", "polaire", "fleece",
-    "polo", "tank", "skirt", "falda", "dress", "vestido",
+    "polo", "tank", "skirt", "falda", "dress", "vestido", "skort",
     "legging", "brassiere", "beha", "bra",
   ],
-  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "chaussette", "sok", "sokken", "cap", "gorra", "strip", "hoes", "cover", "funda"],
+  accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "chaussette", "sok", "sokken", "cap", "gorra", "strip", "hoes", "cover", "funda", "taskar", "taskarren", "tasaccessoire", "tasaccessoires"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
-  bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector", "gant", "handschoen"],
+  bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector", "gant", "handschoen", "glove", "shinguard", "scheenbeschermer"],
   "vitaminen-en-supplementen": [
     "vitamine", "vitaminen", "vitamin", "supplement", "mineraal", "mineral",
     "capsule", "capsul", "gummies", "collageen", "collagen",
@@ -320,7 +348,7 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
 // "padelballen") — anders dan de meeste Engelse/Spaanse feeds ("padel
 // bag", "padel racket"). Woordgrens-matching herkent de trefwoorden dan
 // niet meer omdat ze middenin een aaneengeschreven woord zitten.
-const SPORT_VOORVOEGSELS = ["padel", "tennis", "voetbal", "volleybal", "hockey", "hardloop", "fitness", "pickleball", "basketbal"];
+const SPORT_VOORVOEGSELS = ["padel", "tennis", "voetbal", "volleybal", "hockey", "hardloop", "fitness", "pickleball", "basketbal", "golf", "boks", "kickboks", "thaiboks"];
 
 /**
  * Knipt bekende sportnaam-voorvoegsels los van wat erna komt (bijv.

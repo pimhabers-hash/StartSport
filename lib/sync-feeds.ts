@@ -143,7 +143,7 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
                   Number(abo.grens_budget),
                   Number(abo.grens_midden)
                 ),
-                geslacht: detecteerGeslacht(rij.naam, rij.categorie_ruw),
+                geslacht: detecteerGeslacht(rij.naam, rij.categorie_ruw, rij.geslacht_ruw),
               }
             : {};
           teUpdaten.set(bestaand.id, {
@@ -170,7 +170,7 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
             provider_id: abo.provider_id,
             prijs: prijsGetal,
             budgetklasse,
-            geslacht: detecteerGeslacht(rij.naam, rij.categorie_ruw),
+            geslacht: detecteerGeslacht(rij.naam, rij.categorie_ruw, rij.geslacht_ruw),
             affiliate_url: rij.affiliate_url,
             afbeelding_url: rij.afbeelding_url || null,
             ean: rij.ean || null,

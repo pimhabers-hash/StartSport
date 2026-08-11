@@ -30,6 +30,8 @@ const SPORT_TREFWOORDEN: Record<string, string[]> = {
   voetbal:    ["voetbal", "football", "soccer", "voetbalschoen"],
   wandelen:   ["wandelen", "wandel", "hiking", "hike", "trekking", "nordic walking", "walking pole"],
   wintersport: ["wintersport", "ski", "skiën", "snowboard", "ski touring", "skitour"],
+  golf:       ["golf", "golfstok", "golfstokken", "golfbal", "golfballen", "golftas", "golftassen"],
+  hockey:     ["hockey", "hockeystick", "veldhockey"],
   // Losse woorden ("boksen", "kickboksen") én de meestvoorkomende
   // samengestelde productnamen expliciet — in het Nederlands plakken die
   // vast aan elkaar ("bokshandschoenen", "boksschoenen"), waardoor het
