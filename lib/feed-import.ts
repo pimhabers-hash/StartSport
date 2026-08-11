@@ -225,6 +225,13 @@ export function bepaalBudgetklasse(
  */
 export const CATEGORIE_BUDGET_GRENZEN: Record<string, { budget: number; midden: number }> = {
   racket:                     { budget: 110, midden: 185 },
+  // Golfclubs zitten in een heel andere prijsklasse dan rackets (33e/66e
+  // percentiel van de huidige catalogus: €260 / €475) — vandaar een
+  // eigen grens i.p.v. de racket-grens hergebruiken.
+  clubs:                      { budget: 260, midden: 475 },
+  // Sticks: nog nauwelijks eigen voorraad, dus geschat op basis van
+  // typische hockeystick-prijzen i.p.v. een echte percentielberekening.
+  sticks:                     { budget: 50,  midden: 120 },
   schoenen:                   { budget: 70,  midden: 110 },
   tassen:                     { budget: 60,  midden: 100 },
   kleding:                    { budget: 29,  midden: 48 },
@@ -320,7 +327,12 @@ export function schatNiveauEnFrequentie(budgetklasse: "budget" | "middenklasse" 
 // levert Spaanstalige productdata), terwijl onze eigen categorieën
 // Nederlandse namen hebben.
 const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
-  racket:       ["racket", "raquet", "raqueta", "pala", "paddle", "racquet", "stok", "stokken"],
+  racket:       ["racket", "raquet", "raqueta", "pala", "paddle", "racquet"],
+  // Golfclubs en hockeysticks zijn geen "racket" — andere sport, ander
+  // woord, en (zie CATEGORIE_BUDGET_GRENZEN) een compleet andere
+  // prijsklasse, dus een eigen categorie i.p.v. meeliften op racket.
+  clubs:        ["stok", "stokken"],
+  sticks:       ["hockeystick"],
   schoenen:     ["schoen", "schoenen", "shoe", "zapatilla", "calzado", "footwear", "chaussure"],
   ballen:       ["bal", "ballen", "ball", "bola", "pelota"],
   tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack", "stickbag", "cartbag", "standbag"],
@@ -384,7 +396,7 @@ function bevatAlsWoord(tekst: string, trefwoord: string): boolean {
 // (dat beschrijft alleen waar de tas voor bedoeld is). Door "tassen" en
 // "schoenen" vóór "racket" te checken, wint de juiste, specifiekere
 // categorie in plaats van het eerst-gevonden woord.
-const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "kleding", "ballen", "vitaminen-en-supplementen", "accessoires", "voeding", "bescherming", "racket"];
+const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "kleding", "ballen", "vitaminen-en-supplementen", "accessoires", "voeding", "bescherming", "racket", "clubs", "sticks"];
 
 export function matchCategorie(
   ruweTekst: string,

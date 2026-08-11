@@ -80,9 +80,9 @@ const GEWICHT = {
 export const DOEL_CATEGORIE_HINTS: Record<Doel, string[]> = {
   gezond_blijven: ["schoenen", "kleding"],
   afvallen:       ["schoenen", "kleding", "accessoires"],
-  competitie:     ["racket", "schoenen", "accessoires"],
+  competitie:     ["racket", "clubs", "sticks", "schoenen", "accessoires"],
   sociaal:        ["tas", "kleding"],
-  prestatie:      ["racket", "schoenen", "accessoires"],
+  prestatie:      ["racket", "clubs", "sticks", "schoenen", "accessoires"],
 };
 
 /**
@@ -128,7 +128,7 @@ export const MEERVOUDIGE_CATEGORIEEN = ["accessoires", "voeding", "vitaminen-en-
  * vaste lijst.
  */
 const CATEGORIE_VOLGORDE = [
-  "kleding", "schoenen", "racket", "ballen", "tassen", "bescherming",
+  "kleding", "schoenen", "racket", "clubs", "sticks", "ballen", "tassen", "bescherming",
   "voeding", "vitaminen-en-supplementen", "accessoires",
 ];
 
