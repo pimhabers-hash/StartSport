@@ -73,6 +73,27 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
 
   const totaalprijs = geselecteerdeProducten.reduce((sum, p) => sum + p.prijs, 0);
 
+  // Eén "bestel bij X"-knop per aanbieder i.p.v. per product — een pakket
+  // met producten van 3 aanbieders geeft zo 3 knoppen i.p.v. bijv. 8. Er
+  // bestaat geen universele manier om producten van verschillende
+  // webshops met één link al samen in een winkelmandje te krijgen (dat
+  // hangt af van het platform van elke aanbieder afzonderlijk, niet iets
+  // wat wij vanuit een affiliate-link kunnen afdwingen) — de knop opent
+  // daarom alle bijbehorende producten in aparte tabbladen, zodat de
+  // klant per aanbieder nog maar één keer hoeft te klikken. De losse
+  // productlinks blijven daaronder ook gewoon staan voor wie liever per
+  // stuk klikt, of als de browser extra tabbladen blokkeert.
+  const perAanbieder = useMemo(() => {
+    const groepen = new Map<string, PakketProduct[]>();
+    geselecteerdeProducten.forEach((product) => {
+      const naam = product.provider?.naam ?? "Overige aanbieders";
+      const lijst = groepen.get(naam) ?? [];
+      lijst.push(product);
+      groepen.set(naam, lijst);
+    });
+    return Array.from(groepen.entries()).map(([naam, producten]) => ({ naam, producten }));
+  }, [geselecteerdeProducten]);
+
   async function trackKlik(product: PakketProduct) {
     try {
       await fetch("/api/affiliate-click", {
@@ -83,6 +104,13 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
     } catch {
       // tracking mag navigatie nooit blokkeren
     }
+  }
+
+  function bestelAlles(producten: PakketProduct[]) {
+    producten.forEach((product) => {
+      trackKlik(product);
+      window.open(product.affiliate_url, "_blank", "noopener,noreferrer");
+    });
   }
 
   return (
@@ -239,24 +267,46 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
             </span>
           </div>
 
-          {/* Losse affiliate-knoppen per product */}
-          <div className="space-y-2">
-            {geselecteerdeProducten.map((product) => (
-              <a
-                key={product.id}
-                href={product.affiliate_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackKlik(product)}
-                className="flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl border border-brand-border hover:border-brand-gold/40 transition-colors group"
-              >
-                <span className="text-brand-muted text-xs font-body truncate min-w-0 flex-1 group-hover:text-brand-ivory transition-colors">
-                  {product.category.naam}: {product.naam}
-                </span>
-                <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3 text-brand-gold flex-shrink-0">
-                  <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </a>
+          {/* Bestel-knoppen, gegroepeerd per aanbieder */}
+          <div className="space-y-5">
+            {perAanbieder.map(({ naam, producten }) => (
+              <div key={naam}>
+                <button
+                  onClick={() => bestelAlles(producten)}
+                  className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl gold-shimmer text-brand-black text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  <span className="truncate min-w-0 flex-1 text-left">
+                    Bestel bij {naam} ({producten.length} product{producten.length !== 1 ? "en" : ""})
+                  </span>
+                  <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3 flex-shrink-0">
+                    <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                {producten.length > 1 && (
+                  <p className="text-brand-muted text-[11px] font-body mt-1.5 mb-2">
+                    Opent {producten.length} tabbladen — één per product. Blokkeert je browser dat, klik dan hieronder per product.
+                  </p>
+                )}
+                <div className="space-y-1.5 mt-2">
+                  {producten.map((product) => (
+                    <a
+                      key={product.id}
+                      href={product.affiliate_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackKlik(product)}
+                      className="flex items-center justify-between gap-2 px-4 py-2 rounded-lg border border-brand-border hover:border-brand-gold/40 transition-colors group"
+                    >
+                      <span className="text-brand-muted text-xs font-body truncate min-w-0 flex-1 group-hover:text-brand-ivory transition-colors">
+                        {product.category.naam}: {product.naam}
+                      </span>
+                      <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3 text-brand-gold flex-shrink-0">
+                        <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </a>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
