@@ -16,10 +16,24 @@ export const metadata: Metadata = {
     siteName: "StartSport",
     locale: "nl_NL",
     type: "website",
+    images: ["/opengraph-image"],
   },
   other: {
     "tradetracker-site-verification": "0143437e96ae183e8402ac0f20e307cd27e79169",
   },
+};
+
+// Organization structured data: dit (niet de favicon) is het mechanisme
+// waarmee Google een merklogo aan een site koppelt in zoekresultaten —
+// zie https://developers.google.com/search/docs/appearance/structured-data/logo.
+// "logo" verwijst naar /apple-icon (180x180, ruim boven Google's minimum
+// van 112x112px).
+const ORGANISATIE_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "StartSport",
+  url: "https://startsport.nl",
+  logo: "https://startsport.nl/apple-icon",
 };
 
 export default function RootLayout({
@@ -30,6 +44,10 @@ export default function RootLayout({
   return (
     <html lang="nl">
       <body className="min-h-screen bg-brand-black text-brand-ivory antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANISATIE_JSONLD) }}
+        />
         {children}
         <CookieBanner />
         <GoogleAnalytics />

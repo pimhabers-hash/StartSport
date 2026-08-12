@@ -10,6 +10,28 @@ function bevatAlsWoord(tekst: string, woord: string): boolean {
   return patroon.test(tekst);
 }
 
+// Zelfde probleem als bij CATEGORIE_TREFWOORDEN in lib/feed-import.ts:
+// Nederlandse productnamen plakken een sportnaam vaak vast aan het
+// erop volgende woord ("Handbalsokken", "Voetbalschoen") zonder spatie,
+// waardoor het sport-trefwoord zelf er geen eigen woordgrens heeft en
+// bevatAlsWoord() het mist — een "Handbalsokken"-product werd zo nooit
+// als Handbal herkend en viel terug op een andere, minder passende
+// sport. Zelfde voorvoegsellijst als in feed-import.ts, hier apart
+// gehouden i.p.v. geïmporteerd om deze twee losstaande matchers
+// (sport vs. categorie) niet aan elkaar te koppelen.
+const SPORT_VOORVOEGSELS = [
+  "padel", "tennis", "voetbal", "volleybal", "hockey", "hardloop", "fitness", "pickleball", "basketbal", "golf", "boks", "kickboks", "thaiboks",
+  "zwem", "fiets", "badminton", "tafeltennis", "handbal", "klim", "duik", "skateboard", "trampoline", "surf", "paardrijd",
+];
+
+function loskoppelSportVoorvoegsel(tekst: string): string {
+  let resultaat = tekst;
+  for (const voorvoegsel of SPORT_VOORVOEGSELS) {
+    resultaat = resultaat.replace(new RegExp(`\\b(${voorvoegsel})([a-z])`, "gi"), "$1 $2");
+  }
+  return resultaat;
+}
+
 /**
  * Trefwoorden per sport-slug (Engels/Nederlands/Duits/Spaans, feeds zijn
  * internationaal) — zelfde aanpak als CATEGORIE_TREFWOORDEN in
@@ -79,19 +101,27 @@ const SPORT_TREFWOORDEN: Record<string, string[]> = {
 export function matchSport(tekst: string, sporten: Sport[]): string | null {
   if (!tekst) return null;
 
-  for (const sport of sporten) {
-    const trefwoorden = SPORT_TREFWOORDEN[sport.slug];
-    if (!trefwoorden) continue;
-    if (trefwoorden.some((woord) => bevatAlsWoord(tekst, woord))) {
-      return sport.id;
-    }
-  }
+  // Zowel de originele tekst als de voorvoegsel-losgeknipte variant
+  // proberen (zie loskoppelSportVoorvoegsel hierboven) — anders mist een
+  // aaneengeschreven productnaam als "Handbalsokken" het sport-trefwoord
+  // "handbal" volledig, omdat dat er middenin geen eigen woordgrens heeft.
+  const kandidaten = [tekst, loskoppelSportVoorvoegsel(tekst)];
 
-  const gesorteerdeSporten = [...sporten].sort((a, b) => b.naam.length - a.naam.length);
-  for (const sport of gesorteerdeSporten) {
-    const slugAlsTekst = sport.slug.replace(/-/g, " ");
-    if (bevatAlsWoord(tekst, sport.naam) || bevatAlsWoord(tekst, slugAlsTekst)) {
-      return sport.id;
+  for (const kandidaat of kandidaten) {
+    for (const sport of sporten) {
+      const trefwoorden = SPORT_TREFWOORDEN[sport.slug];
+      if (!trefwoorden) continue;
+      if (trefwoorden.some((woord) => bevatAlsWoord(kandidaat, woord))) {
+        return sport.id;
+      }
+    }
+
+    const gesorteerdeSporten = [...sporten].sort((a, b) => b.naam.length - a.naam.length);
+    for (const sport of gesorteerdeSporten) {
+      const slugAlsTekst = sport.slug.replace(/-/g, " ");
+      if (bevatAlsWoord(kandidaat, sport.naam) || bevatAlsWoord(kandidaat, slugAlsTekst)) {
+        return sport.id;
+      }
     }
   }
 

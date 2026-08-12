@@ -373,6 +373,12 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   clubs:        ["golfstok", "golfstokken", "golfclub", "golfclubs"],
   sticks:       ["hockeystick"],
   schoenen:     ["schoen", "schoenen", "shoe", "zapatilla", "calzado", "footwear", "chaussure", "strandschoenen", "turnschoenen", "teenslippers", "slippers"],
+  // Let op: GEEN kaal "handbal"/"basketbal" hier — Decathlons eigen
+  // topcategorie-label voor die hele sportafdeling is zelf ook letterlijk
+  // "Basketbal"/"Handbal" en staat zo als los woord in de ruwe categorie
+  // van ELK product uit die afdeling (braces, markeringspijlen, sokken,
+  // niet alleen de bal). Zie STERKE_BALSIGNALEN hieronder voor de wél
+  // betrouwbare, specifieke variant.
   ballen:       ["bal", "ballen", "ball", "bola", "pelota"],
   tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack", "stickbag", "cartbag", "standbag"],
   kleding:      [
@@ -391,7 +397,12 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   ],
   accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "chaussette", "sok", "sokken", "cap", "gorra", "strip", "hoes", "cover", "funda", "taskar", "taskarren", "tasaccessoire", "tasaccessoires"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
-  bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector", "gant", "handschoen", "glove", "shinguard", "scheenbeschermer", "helm"],
+  // "boksracket"/"kickboksracket"/"thaiboksracket" expliciet: dit zijn
+  // stootkussens/focus mitts (trainingsmateriaal), geen tennis-achtige
+  // rackets — zonder deze compounds zou de losknip-stap (die "Boksracket"
+  // terecht als Boksen-sport herkent) het woord "racket" ook los laten
+  // staan en zo bij de Racket-categorie laten belanden.
+  bescherming:  ["bescherming", "protection", "proteccion", "guard", "protector", "gant", "handschoen", "glove", "shinguard", "scheenbeschermer", "helm", "boksracket", "kickboksracket", "thaiboksracket"],
   "vitaminen-en-supplementen": [
     "vitamine", "vitaminen", "vitamin", "supplement", "mineraal", "mineral",
     "capsule", "capsul", "gummies", "collageen", "collagen",
@@ -403,15 +414,41 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   // De fiets zelf en fietsonderdelen (frame, wielen, aandrijving) — te
   // uiteenlopend qua onderdeeltype om los te splitsen, dus één brede
   // categorie voor "dit heeft met de fiets zelf te maken".
-  "fietsen-categorie": ["racefiets", "mountainbike", "mtb", "stadsfiets", "kinderfiets"],
+  "fietsen-categorie": [
+    "racefiets", "mountainbike", "mtb", "stadsfiets", "kinderfiets",
+    "fietsband", "fietsbanden", "fietsonderdeel", "fietsonderdelen", "fietsframe", "fietswiel", "fietswielen",
+  ],
 };
 
-// Categorieën waarvan de naam ook een gangbaar Nederlands woord met een
-// heel andere betekenis is — voor deze categorieën mag de "vangnet"-match
-// op c.naam/c.slug in matchCategorie() niet gebruikt worden (alleen de
-// expliciete trefwoorden hierboven tellen). "Clubs" is bijv. ook het
-// gewone woord voor sportverenigingen ("tafeltennistafel voor clubs").
-const CATEGORIE_ZONDER_NAAM_VANGNET = new Set(["clubs"]);
+// Per categorie-slug: trefwoorden die ALLEEN tellen als ze in de ruwe
+// feed-categorie voorkomen (nooit in de productnaam-candidaten) — voor
+// signalen die te specifiek/betrouwbaar zijn om als gewoon trefwoord te
+// gebruiken, maar via de normale candidate-volgorde (productnaam eerst)
+// nooit aan bod zouden komen. Concreet: Decathlon labelt de bal zelf
+// exact als "Handballen"/"Basketballen" (meervoud) in de subcategorie,
+// heel anders dan de generieke, herhaalde "Handbal"/"Basketbal"
+// afdelingsnaam die op ELK product in die sportafdeling staat (braces,
+// markeringspijlen, sokken) — dat laatste is te breed om als trefwoord
+// te gebruiken. Het probleem: de productnaam van een echte bal bevat
+// vaak "Grip" ("... Pure Grip NO. 2.5"), wat normaliter al Accessoires
+// laat winnen vóórdat de ruwe categorie ooit gecheckt wordt — vandaar
+// deze aparte, voorrang-krijgende stap.
+const STERKE_RUWE_CATEGORIE_SIGNALEN: Record<string, string[]> = {
+  ballen: ["handballen", "basketballen"],
+};
+
+// Categorieën waarvan de naam een risico op valse vangnet-matches geeft —
+// voor deze categorieën mag de "vangnet"-match op c.naam/c.slug in
+// matchCategorie() niet gebruikt worden (alleen de expliciete
+// trefwoorden hierboven tellen). Alle vijf zijn niche-categorieën met
+// al goed onderhouden trefwoordenlijsten, dus de vangnet voegt weinig
+// toe — en heeft herhaaldelijk fout gematcht: "Clubs" is ook het gewone
+// woord voor sportverenigingen ("tafeltennistafel voor clubs"), "Sticks"
+// matchte een energiedrank-poeder ("4 sticks"), en "Fietsen" matchte
+// Decathlons eigen brede department-label op cross-sell-producten
+// (een hardloop-drinkfles onder "Bikepacking", een koptelefoon onder
+// een fietscollectie) die zelf niets met een fiets te maken hebben.
+const CATEGORIE_ZONDER_NAAM_VANGNET = new Set(["clubs", "sticks", "racket", "boards", "fietsen-categorie"]);
 
 // Sportnamen die in Nederlandse feeds vaak aan het zelfstandig naamwoord
 // vastgeplakt worden i.p.v. los geschreven ("padeltas", "padelracket",
@@ -486,6 +523,20 @@ export function matchCategorie(
   const kandidaten = [productNaam, ruweTekst]
     .filter(Boolean)
     .flatMap((tekst) => [tekst, loskoppelSportVoorvoegsel(tekst)]);
+
+  // Sterke, ondubbelzinnige signalen in de RUWE categorie krijgen voorrang
+  // op de hele candidate-volgorde hieronder — anders zou bijv. "Grip" in
+  // de productnaam van een bal ("... Pure Grip NO. 2.5") al Accessoires
+  // laten winnen vóórdat de ruwe categorie (die exact "Handballen" zegt)
+  // ooit gecheckt wordt.
+  if (ruweTekst) {
+    for (const categorie of categorieen) {
+      const signalen = STERKE_RUWE_CATEGORIE_SIGNALEN[categorie.slug];
+      if (signalen?.some((woord) => bevatAlsWoord(ruweTekst, woord))) {
+        return categorie.id;
+      }
+    }
+  }
 
   // Sorteer de meegegeven categorieën op onze vaste prioriteitsvolgorde,
   // zodat categorieën die niet in de lijst staan (aangepaste categorieën)

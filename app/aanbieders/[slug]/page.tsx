@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/home/Navbar";
 import { Footer } from "@/components/home/Footer";
 import { ProductAfbeelding } from "@/components/ProductAfbeelding";
+import { FilterDropdown } from "@/components/aanbieders/FilterDropdown";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -17,7 +18,6 @@ const SORTEER_OPTIES = [
 ] as const;
 
 const PAGINA_GROOTTE = 40;
-const FACET_PAGINA_GROOTTE = 1000;
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
@@ -27,55 +27,53 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: `${provider.naam} — alle producten — StartSport` };
 }
 
-type FacetRij = {
-  sport_id: string | null;
-  category_id: string | null;
-  geslacht: string | null;
-  sports: { naam: string; slug: string } | { naam: string; slug: string }[] | null;
-  categories: { naam: string; slug: string } | { naam: string; slug: string }[] | null;
-};
-
 /**
  * Welke sporten/categorieën heeft déze aanbieder daadwerkelijk in de
- * catalogus? Gepagineerd in stappen van 1000 (zelfde reden als op de
- * aanbieders-overzichtspagina: één select() haalt er standaard maar 1000
- * op). Nodig om de filterknoppen te beperken tot wat relevant is — een
- * aanbieder die alleen padel voert, hoeft geen "Hardlopen"-knop te tonen
- * die toch altijd naar "geen producten" leidt.
+ * catalogus, en hoeveel producten elk? Nodig om de filterknoppen te
+ * beperken tot wat relevant is — een aanbieder die alleen padel voert,
+ * hoeft geen "Hardlopen"-knop te tonen die toch altijd naar "geen
+ * producten" leidt.
+ *
+ * Telt via losse COUNT-only requests (head:true) per sport/categorie,
+ * allemaal tegelijk met Promise.all, in plaats van (zoals eerder) alle
+ * duizenden producten van de aanbieder gepagineerd binnenhalen en in JS
+ * optellen — dat laatste kostte bij een grote catalogus (11.000+
+ * producten bij Decathlon) al gauw 10+ sequentiële round-trips. Een
+ * COUNT-query haalt geen rijdata op, alleen het aantal via de
+ * Content-Range header, en al die tellingen lopen nu parallel.
  */
-async function haalProviderFacetten(supabase: Awaited<ReturnType<typeof createClient>>, providerId: string) {
-  const sportTellingen = new Map<string, { naam: string; aantal: number }>();
-  const categorieTellingen = new Map<string, { naam: string; aantal: number }>();
-  const geslachtTellingen = { man: 0, vrouw: 0 };
-
-  for (let vanaf = 0; ; vanaf += FACET_PAGINA_GROOTTE) {
-    const { data, error } = await supabase
+async function haalProviderFacetten(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  providerId: string,
+  alleSporten: { naam: string; slug: string; id: string }[],
+  alleCategorieen: { naam: string; slug: string; id: string }[]
+) {
+  async function telling(kolom: "sport_id" | "category_id", waarde: string) {
+    const { count } = await supabase
       .from("products")
-      .select("sport_id, category_id, geslacht, sports ( naam, slug ), categories ( naam, slug )")
+      .select("id", { count: "exact", head: true })
       .eq("provider_id", providerId)
       .eq("actief", true)
-      .order("id")
-      .range(vanaf, vanaf + FACET_PAGINA_GROOTTE - 1) as { data: FacetRij[] | null; error: unknown };
-
-    if (error || !data || data.length === 0) break;
-
-    data.forEach((rij) => {
-      const sport = Array.isArray(rij.sports) ? rij.sports[0] : rij.sports;
-      if (sport) {
-        const huidig = sportTellingen.get(sport.slug);
-        sportTellingen.set(sport.slug, { naam: sport.naam, aantal: (huidig?.aantal ?? 0) + 1 });
-      }
-      const categorie = Array.isArray(rij.categories) ? rij.categories[0] : rij.categories;
-      if (categorie) {
-        const huidig = categorieTellingen.get(categorie.slug);
-        categorieTellingen.set(categorie.slug, { naam: categorie.naam, aantal: (huidig?.aantal ?? 0) + 1 });
-      }
-      if (rij.geslacht === "man") geslachtTellingen.man += 1;
-      if (rij.geslacht === "vrouw") geslachtTellingen.vrouw += 1;
-    });
-
-    if (data.length < FACET_PAGINA_GROOTTE) break;
+      .eq(kolom, waarde);
+    return count ?? 0;
   }
+
+  const [sportAantallen, categorieAantallen, manAantal, vrouwAantal] = await Promise.all([
+    Promise.all(alleSporten.map((s) => telling("sport_id", s.id))),
+    Promise.all(alleCategorieen.map((c) => telling("category_id", c.id))),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("provider_id", providerId).eq("actief", true).eq("geslacht", "man"),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("provider_id", providerId).eq("actief", true).eq("geslacht", "vrouw"),
+  ]);
+
+  const sportTellingen = new Map<string, { naam: string; aantal: number }>();
+  alleSporten.forEach((s, i) => {
+    if (sportAantallen[i] > 0) sportTellingen.set(s.slug, { naam: s.naam, aantal: sportAantallen[i] });
+  });
+  const categorieTellingen = new Map<string, { naam: string; aantal: number }>();
+  alleCategorieen.forEach((c, i) => {
+    if (categorieAantallen[i] > 0) categorieTellingen.set(c.slug, { naam: c.naam, aantal: categorieAantallen[i] });
+  });
+  const geslachtTellingen = { man: manAantal.count ?? 0, vrouw: vrouwAantal.count ?? 0 };
 
   return { sportTellingen, categorieTellingen, geslachtTellingen };
 }
@@ -95,6 +93,19 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
 
   if (!provider) notFound();
 
+  // Sporten/categorieën (met id, voor de filter-lookup hieronder én de
+  // facet-tellingen) samen met de facetten zelf ophalen — onafhankelijk
+  // van elkaar, dus parallel i.p.v. na elkaar.
+  const [{ data: sporten }, { data: categorieen }] = await Promise.all([
+    supabase.from("sports").select("id, naam, slug").eq("actief", true).order("volgorde"),
+    supabase.from("categories").select("id, naam, slug").order("volgorde"),
+  ]);
+
+  // Filter-slug → id opzoeken in de lijst die we toch al hebben, i.p.v.
+  // een aparte database-aanroep per actief filter.
+  const sportFilterId = sportFilter ? (sporten ?? []).find((s) => s.slug === sportFilter)?.id : undefined;
+  const categorieFilterId = categorieFilter ? (categorieen ?? []).find((c) => c.slug === categorieFilter)?.id : undefined;
+
   let query = supabase
     .from("products")
     .select(`
@@ -109,22 +120,20 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
   else if (sorteer === "prijs-af") query = query.order("prijs", { ascending: false });
   else query = query.order("score", { ascending: false });
 
-  if (sportFilter) {
-    const { data: sport } = await supabase.from("sports").select("id").eq("slug", sportFilter).single();
-    if (sport) query = query.eq("sport_id", sport.id);
-  }
-  if (categorieFilter) {
-    const { data: categorie } = await supabase.from("categories").select("id").eq("slug", categorieFilter).single();
-    if (categorie) query = query.eq("category_id", categorie.id);
-  }
+  if (sportFilterId) query = query.eq("sport_id", sportFilterId);
+  if (categorieFilterId) query = query.eq("category_id", categorieFilterId);
   if (geslachtFilter === "man" || geslachtFilter === "vrouw") {
     query = query.eq("geslacht", geslachtFilter);
   }
 
-  const [{ data: sporten }, { data: categorieen }, { sportTellingen, categorieTellingen, geslachtTellingen }] = await Promise.all([
-    supabase.from("sports").select("naam, slug").eq("actief", true).order("volgorde"),
-    supabase.from("categories").select("naam, slug").order("volgorde"),
-    haalProviderFacetten(supabase, provider.id),
+  const huidigePagina = Math.max(1, parseInt(paginaParam ?? "1", 10) || 1);
+  const vanaf = (huidigePagina - 1) * PAGINA_GROOTTE;
+
+  // Productenpagina en facet-tellingen zijn onafhankelijk van elkaar —
+  // ook deze parallel i.p.v. na elkaar ophalen.
+  const [{ data: producten, count }, { sportTellingen, categorieTellingen, geslachtTellingen }] = await Promise.all([
+    query.range(vanaf, vanaf + PAGINA_GROOTTE - 1),
+    haalProviderFacetten(supabase, provider.id, sporten ?? [], categorieen ?? []),
   ]);
 
   // Alleen sporten/categorieën tonen die deze aanbieder ook echt voert.
@@ -134,10 +143,6 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
   const relevanteCategorieen = (categorieen ?? [])
     .filter((c) => categorieTellingen.has(c.slug))
     .map((c) => ({ ...c, aantal: categorieTellingen.get(c.slug)!.aantal }));
-
-  const huidigePagina = Math.max(1, parseInt(paginaParam ?? "1", 10) || 1);
-  const vanaf = (huidigePagina - 1) * PAGINA_GROOTTE;
-  const { data: producten, count } = await query.range(vanaf, vanaf + PAGINA_GROOTTE - 1);
 
   const totaalProducten = count ?? 0;
   const aantalPaginas = Math.max(1, Math.ceil(totaalProducten / PAGINA_GROOTTE));
@@ -181,50 +186,54 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
             }
 
             const heeftGeslachtsfilter = geslachtTellingen.man > 0 || geslachtTellingen.vrouw > 0;
+            const heeftActiefFilter = Boolean(sportFilter || categorieFilter || geslachtFilter);
 
             return (
               <div className="space-y-3 mb-8">
-                {/* Op mobiel horizontaal scrollend i.p.v. wrappen — met
-                    veel filters samen zou wrappen alle producten ver onder
-                    de vouw duwen op een smal scherm. */}
-                {relevanteSporten.length > 1 && (
-                  <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto sm:overflow-visible -mx-6 px-6 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
+                {/* Sport/categorie als uitklapmenu i.p.v. een lange rij
+                    pilletjes — bij aanbieders met veel sporten/categorieën
+                    (bijv. Decathlon, 20+ sporten) werd die rij onoverzichtelijk
+                    en moest je op mobiel horizontaal scrollen om 'm te zien. */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {relevanteSporten.length > 1 && (
+                    <FilterDropdown
+                      label="Sport"
+                      huidigeLabel={relevanteSporten.find((s) => s.slug === sportFilter)?.naam ?? "Alles"}
+                      opties={[
+                        { label: "Alles", href: hrefMet({ sport: undefined }), actief: !sportFilter },
+                        ...relevanteSporten.map((s) => ({
+                          label: s.naam,
+                          href: hrefMet({ sport: sportFilter === s.slug ? undefined : s.slug }),
+                          actief: sportFilter === s.slug,
+                          aantal: s.aantal,
+                        })),
+                      ]}
+                    />
+                  )}
+                  {relevanteCategorieen.length > 1 && (
+                    <FilterDropdown
+                      label="Categorie"
+                      huidigeLabel={relevanteCategorieen.find((c) => c.slug === categorieFilter)?.naam ?? "Alles"}
+                      opties={[
+                        { label: "Alles", href: hrefMet({ categorie: undefined }), actief: !categorieFilter },
+                        ...relevanteCategorieen.map((c) => ({
+                          label: c.naam,
+                          href: hrefMet({ categorie: categorieFilter === c.slug ? undefined : c.slug }),
+                          actief: categorieFilter === c.slug,
+                          aantal: c.aantal,
+                        })),
+                      ]}
+                    />
+                  )}
+                  {heeftActiefFilter && (
                     <Link
                       href={hrefMet({ sport: undefined, categorie: undefined, geslacht: undefined })}
-                      className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-                        !sportFilter && !categorieFilter && !geslachtFilter ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
-                      }`}
+                      className="px-3 py-1.5 rounded-lg text-xs font-mono text-brand-muted hover:text-brand-ivory transition-colors"
                     >
-                      Alles
+                      Filters wissen ✕
                     </Link>
-                    {relevanteSporten.map((s) => (
-                      <Link
-                        key={s.slug}
-                        href={hrefMet({ sport: sportFilter === s.slug ? undefined : s.slug })}
-                        className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-                          sportFilter === s.slug ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
-                        }`}
-                      >
-                        {s.naam} <span className="opacity-60">({s.aantal})</span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-                {relevanteCategorieen.length > 1 && (
-                  <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto sm:overflow-visible -mx-6 px-6 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
-                    {relevanteCategorieen.map((c) => (
-                      <Link
-                        key={c.slug}
-                        href={hrefMet({ categorie: categorieFilter === c.slug ? undefined : c.slug })}
-                        className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-                          categorieFilter === c.slug ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted"
-                        }`}
-                      >
-                        {c.naam} <span className="opacity-60">({c.aantal})</span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Los filter op geslacht en sortering — zoals bij een
                     reguliere webshop, onafhankelijk van sport/categorie. */}

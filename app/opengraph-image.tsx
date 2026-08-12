@@ -1,13 +1,9 @@
 import { ImageResponse } from "next/og";
 
-// 48x48 i.p.v. de eerdere 32x32 — Google's eigen richtlijn voor het
-// favicon-in-zoekresultaten-feature vraagt expliciet om minimaal 48x48px
-// (liefst een veelvoud daarvan); kleinere favicons worden door Google
-// vaak gewoon genegeerd.
-export const size = { width: 48, height: 48 };
+export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function Icon() {
+export default function OpengraphImage() {
   return new ImageResponse(
     (
       <div
@@ -15,21 +11,31 @@ export default function Icon() {
           width: "100%",
           height: "100%",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           background: "#0A0B0D",
-          borderRadius: 9,
         }}
       >
         <span
           style={{
-            fontSize: 30,
+            fontSize: 130,
             fontWeight: 700,
             color: "#C6A15B",
             fontFamily: "Georgia, serif",
           }}
         >
-          S
+          StartSport
+        </span>
+        <span
+          style={{
+            fontSize: 32,
+            color: "#9B9DA3",
+            fontFamily: "sans-serif",
+            marginTop: 16,
+          }}
+        >
+          Vind jouw perfecte sportuitrusting
         </span>
       </div>
     ),
