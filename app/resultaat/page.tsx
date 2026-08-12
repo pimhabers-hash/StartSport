@@ -45,7 +45,7 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
       id, naam, merk, prijs, niveau, budgetklasse, sport_id,
       geschikt_voor_frequentie, affiliate_url, afbeelding_url, uitleg, score, geslacht,
       categories ( id, naam, slug ),
-      providers ( naam, logo_url )
+      providers ( naam, slug, logo_url )
     `)
     .or(`sport_id.eq.${sport_id},sport_id.is.null`)
     .eq("actief", true);
@@ -77,7 +77,7 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
     uitleg: p.uitleg ?? null,
     binnen_buiten: null,
     category: Array.isArray(p.categories) ? p.categories[0] : p.categories as { id: string; naam: string; slug: string },
-    provider: Array.isArray(p.providers) ? p.providers[0] : p.providers as { naam: string; logo_url: string | null } | null,
+    provider: Array.isArray(p.providers) ? p.providers[0] : p.providers as { naam: string; slug: string; logo_url: string | null } | null,
   }));
 
   const categorieOpties = groepeerPerCategorieMetOpties(producten, {
@@ -127,7 +127,7 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
 
           {/* Interactieve pakket-builder */}
           {categorieOpties.length > 0 ? (
-            <PakketBuilder categorieOpties={categorieOpties} />
+            <PakketBuilder categorieOpties={categorieOpties} sportSlug={params.sport_slug ?? ""} />
           ) : (
             <div className="card-surface rounded-2xl p-12 text-center">
               <p className="text-brand-muted font-body">

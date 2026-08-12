@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { ProductAfbeelding } from "@/components/ProductAfbeelding";
 import { MEERVOUDIGE_CATEGORIEEN, type CategorieOpties, type PakketProduct } from "@/lib/configurator-engine";
 
 interface PakketBuilderProps {
   categorieOpties: CategorieOpties[];
+  sportSlug: string;
 }
 
-export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
+export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps) {
   // Eén datastructuur voor beide gedragingen: per categorie een set
   // geselecteerde product-id's. Bij "kies er één"-categorieën
   // (racket/schoenen/kleding/ballen/tassen/bescherming) zit hier
@@ -84,14 +86,14 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
   // productlinks blijven daaronder ook gewoon staan voor wie liever per
   // stuk klikt, of als de browser extra tabbladen blokkeert.
   const perAanbieder = useMemo(() => {
-    const groepen = new Map<string, PakketProduct[]>();
+    const groepen = new Map<string, { slug: string | null; producten: PakketProduct[] }>();
     geselecteerdeProducten.forEach((product) => {
       const naam = product.provider?.naam ?? "Overige aanbieders";
-      const lijst = groepen.get(naam) ?? [];
-      lijst.push(product);
-      groepen.set(naam, lijst);
+      const groep = groepen.get(naam) ?? { slug: product.provider?.slug ?? null, producten: [] };
+      groep.producten.push(product);
+      groepen.set(naam, groep);
     });
-    return Array.from(groepen.entries()).map(([naam, producten]) => ({ naam, producten }));
+    return Array.from(groepen.entries()).map(([naam, { slug, producten }]) => ({ naam, slug, producten }));
   }, [geselecteerdeProducten]);
 
   async function trackKlik(product: PakketProduct) {
@@ -269,19 +271,32 @@ export function PakketBuilder({ categorieOpties }: PakketBuilderProps) {
 
           {/* Bestel-knoppen, gegroepeerd per aanbieder */}
           <div className="space-y-5">
-            {perAanbieder.map(({ naam, producten }) => (
+            {perAanbieder.map(({ naam, slug, producten }) => (
               <div key={naam}>
-                <button
-                  onClick={() => bestelAlles(producten)}
-                  className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl gold-shimmer text-brand-black text-sm font-medium hover:opacity-90 transition-opacity"
-                >
-                  <span className="truncate min-w-0 flex-1 text-left">
-                    Bestel bij {naam} ({producten.length} product{producten.length !== 1 ? "en" : ""})
-                  </span>
-                  <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3 flex-shrink-0">
-                    <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
+                <div className="flex items-stretch gap-1.5">
+                  <button
+                    onClick={() => bestelAlles(producten)}
+                    className="flex-1 min-w-0 flex items-center justify-between gap-2 px-4 py-3 rounded-xl gold-shimmer text-brand-black text-sm font-medium hover:opacity-90 transition-opacity"
+                  >
+                    <span className="truncate min-w-0 flex-1 text-left">
+                      Bestel bij {naam} ({producten.length} product{producten.length !== 1 ? "en" : ""})
+                    </span>
+                    <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3 flex-shrink-0">
+                      <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {slug && (
+                    <Link
+                      href={`/aanbieders/${slug}${sportSlug ? `?sport=${sportSlug}` : ""}`}
+                      title={`Alle ${naam}-producten voor deze sport bekijken`}
+                      className="flex-shrink-0 flex items-center justify-center w-11 rounded-xl border border-brand-gold/30 text-brand-gold hover:bg-brand-gold/10 transition-colors"
+                    >
+                      <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
+                        <path d="M6 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-3M9 3h4v4M13 3L7 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </Link>
+                  )}
+                </div>
                 {producten.length > 1 && (
                   <p className="text-brand-muted text-[11px] font-body mt-1.5 mb-2">
                     Opent {producten.length} tabbladen — één per product. Blokkeert je browser dat, klik dan hieronder per product.

@@ -41,7 +41,7 @@ export interface ProductMatcher {
   geslacht?: "man" | "vrouw" | "unisex" | null;
   sport_id: string | null;
   category: { id: string; naam: string; slug: string };
-  provider: { naam: string; logo_url: string | null } | null;
+  provider: { naam: string; slug: string; logo_url: string | null } | null;
 }
 
 export interface PakketProduct extends ProductMatcher {
@@ -303,7 +303,18 @@ export function groepeerPerCategorieMetOpties(
 
   const resultaat: CategorieOpties[] = [];
   for (const [, producten] of perCategorie) {
-    const gesorteerd = producten.sort((a, b) => b.match_score - a.match_score);
+    // Producten die écht bij déze sport horen (sport_id matcht) gaan altijd
+    // vóór universele producten (sport_id null, alleen aanwezig via
+    // UNIVERSELE_CATEGORIEEN) — die mogen meedoen maar niet de "Beste
+    // match" en bovenste opties inpikken van een sport-specifiek product
+    // met een toevallig iets lagere match_score. Binnen elke van de twee
+    // groepen blijft match_score bepalend.
+    const gesorteerd = producten.sort((a, b) => {
+      const aSpecifiek = a.sport_id === input.sport_id ? 1 : 0;
+      const bSpecifiek = b.sport_id === input.sport_id ? 1 : 0;
+      if (aSpecifiek !== bSpecifiek) return bSpecifiek - aSpecifiek;
+      return b.match_score - a.match_score;
+    });
     resultaat.push({
       category: gesorteerd[0].category,
       opties: gesorteerd.slice(0, maxOptiesPerCategorie),
