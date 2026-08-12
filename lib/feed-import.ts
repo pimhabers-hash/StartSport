@@ -356,11 +356,21 @@ export function schatNiveauEnFrequentie(budgetklasse: "budget" | "middenklasse" 
 // levert Spaanstalige productdata), terwijl onze eigen categorieën
 // Nederlandse namen hebben.
 const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
-  racket:       ["racket", "raquet", "raqueta", "pala", "paddle", "racquet"],
+  // Let op: GEEN kale "paddle" hier — Decathlon's eigen topcategorie voor
+  // stand-up paddleboarding heet letterlijk "Stand Up Paddle (SUP)", dus
+  // dat woord ving daarmee alle SUP-boards, -pompen en -onderdelen ook
+  // op als "Racket". "racket"/"pala"/"raqueta" dekken padel/tennis al
+  // voldoende zonder dat risico.
+  racket:       ["racket", "raquet", "raqueta", "pala", "racquet", "batje", "batjes", "tafeltennisbat", "tafeltennisbatje"],
   // Golfclubs en hockeysticks zijn geen "racket" — andere sport, ander
   // woord, en (zie CATEGORIE_BUDGET_GRENZEN) een compleet andere
   // prijsklasse, dus een eigen categorie i.p.v. meeliften op racket.
-  clubs:        ["stok", "stokken"],
+  // Let op: GEEN kale "stok"/"stokken" hier — dat woord is veel te
+  // generiek (tentstokken, skistokken, nordic walking-stokken, massage-
+  // stokken, vlieger-bouwstokken bevatten het allemaal ook) en pikte
+  // producten uit compleet andere sporten op. Alleen expliciete
+  // golf-samenstellingen.
+  clubs:        ["golfstok", "golfstokken", "golfclub", "golfclubs"],
   sticks:       ["hockeystick"],
   schoenen:     ["schoen", "schoenen", "shoe", "zapatilla", "calzado", "footwear", "chaussure", "strandschoenen", "turnschoenen", "teenslippers", "slippers"],
   ballen:       ["bal", "ballen", "ball", "bola", "pelota"],
@@ -389,12 +399,19 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   ],
   // "Boards" bundelt surf-/SUP-/skate-/snowboards — één categorie i.p.v.
   // vier bijna-lege losse categorieën voor vergelijkbare platte planken.
-  boards:       ["skateboard", "surfboard", "supboard", "wakeboard", "snowboard", "surfplank", "bodyboard"],
+  boards:       ["skateboard", "surfboard", "supboard", "sup board", "wakeboard", "snowboard", "surfplank", "bodyboard"],
   // De fiets zelf en fietsonderdelen (frame, wielen, aandrijving) — te
   // uiteenlopend qua onderdeeltype om los te splitsen, dus één brede
   // categorie voor "dit heeft met de fiets zelf te maken".
   "fietsen-categorie": ["racefiets", "mountainbike", "mtb", "stadsfiets", "kinderfiets"],
 };
+
+// Categorieën waarvan de naam ook een gangbaar Nederlands woord met een
+// heel andere betekenis is — voor deze categorieën mag de "vangnet"-match
+// op c.naam/c.slug in matchCategorie() niet gebruikt worden (alleen de
+// expliciete trefwoorden hierboven tellen). "Clubs" is bijv. ook het
+// gewone woord voor sportverenigingen ("tafeltennistafel voor clubs").
+const CATEGORIE_ZONDER_NAAM_VANGNET = new Set(["clubs"]);
 
 // Sportnamen die in Nederlandse feeds vaak aan het zelfstandig naamwoord
 // vastgeplakt worden i.p.v. los geschreven ("padeltas", "padelracket",
@@ -406,15 +423,23 @@ const SPORT_VOORVOEGSELS = [
   "zwem", "fiets", "badminton", "tafeltennis", "handbal", "klim", "duik", "skateboard", "trampoline", "surf", "paardrijd",
 ];
 
+// Algemene Nederlandse doelgroep-voorvoegsels die net zo vaak vastplakken
+// aan het zelfstandig naamwoord ("Kinderhelm", "Damesracket",
+// "Herenschoenen") — zonder deze losknip mist bijv. "helm" zijn woordgrens
+// in "Kinderhelm" en valt het product tussen wal en schip (of belandt het
+// via een ander, minder passend trefwoord in de verkeerde categorie).
+const ALGEMENE_VOORVOEGSELS = ["kinder", "dames", "heren", "junior", "senior", "unisex"];
+
 /**
- * Knipt bekende sportnaam-voorvoegsels los van wat erna komt (bijv.
- * "Padelballen" → "Padel ballen"), zodat de trefwoorden-matching hieronder
- * ze alsnog als apart woord herkent.
+ * Knipt bekende sportnaam- en doelgroep-voorvoegsels los van wat erna komt
+ * (bijv. "Padelballen" → "Padel ballen", "Kinderhelm" → "Kinder helm"),
+ * zodat de trefwoorden-matching hieronder ze alsnog als apart woord
+ * herkent.
  */
 function loskoppelSportVoorvoegsel(tekst: string): string {
   let resultaat = tekst;
-  for (const sport of SPORT_VOORVOEGSELS) {
-    resultaat = resultaat.replace(new RegExp(`\\b(${sport})([a-z])`, "gi"), "$1 $2");
+  for (const voorvoegsel of [...SPORT_VOORVOEGSELS, ...ALGEMENE_VOORVOEGSELS]) {
+    resultaat = resultaat.replace(new RegExp(`\\b(${voorvoegsel})([a-z])`, "gi"), "$1 $2");
   }
   return resultaat;
 }
@@ -453,7 +478,14 @@ export function matchCategorie(
   // mee, ongeacht of het een tas, bal of racket is — als die tekst als
   // eerste gecheckt zou worden, wint dat catch-all label meteen en komt de
   // (juistere) productnaam nooit meer aan bod.
-  const kandidaten = [productNaam, ruweTekst].filter(Boolean).map(loskoppelSportVoorvoegsel);
+  // Zowel de originele tekst als de sport-voorvoegsel-losgeknipte variant
+  // worden gecheckt: sommige trefwoorden zijn juist bedoeld als aaneen-
+  // geschreven samenstelling (bijv. "golfstokken"), andere hebben het
+  // voorvoegsel nodig om als los woord herkend te worden (bijv.
+  // "padelballen" → "padel ballen" → "ballen").
+  const kandidaten = [productNaam, ruweTekst]
+    .filter(Boolean)
+    .flatMap((tekst) => [tekst, loskoppelSportVoorvoegsel(tekst)]);
 
   // Sorteer de meegegeven categorieën op onze vaste prioriteitsvolgorde,
   // zodat categorieën die niet in de lijst staan (aangepaste categorieën)
@@ -477,9 +509,14 @@ export function matchCategorie(
     }
 
     // Vangnet: directe match op onze eigen categorienaam/slug (bijv.
-    // Nederlandse productnamen die toevallig geen Engels trefwoord bevatten)
+    // Nederlandse productnamen die toevallig geen Engels trefwoord bevatten).
+    // Uitgezonderd: categorieën waarvan de naam een gangbaar Nederlands
+    // woord met een heel andere betekenis is — "Clubs" matcht anders ook
+    // op "tafeltennistafel voor clubs" (sportverenigingen, geen golfclubs).
     const directeMatch = gesorteerdeCategorieen.find(
-      (c) => bevatAlsWoord(tekst, c.slug) || bevatAlsWoord(tekst, c.naam)
+      (c) =>
+        !CATEGORIE_ZONDER_NAAM_VANGNET.has(c.slug) &&
+        (bevatAlsWoord(tekst, c.slug) || bevatAlsWoord(tekst, c.naam))
     );
     if (directeMatch) return directeMatch.id;
   }

@@ -65,7 +65,7 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
       const naamMap = new Map(bestaandeProducten.map((p) => [p.naam.toLowerCase().trim(), p]));
       const eanMap = new Map(bestaandeProducten.filter((p) => p.ean).map((p) => [p.ean, p]));
 
-      let succes = 0, mislukt = 0, overgeslagen = 0;
+      let succes = 0, mislukt = 0, overgeslagen = 0, gedeactiveerd = 0;
       const voorbeeldenOvergeslagenCategorieen = new Set<string>();
 
       // Verzamel eerst alle te verwerken producten in twee lijsten —
@@ -96,16 +96,32 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
         const category_id = rij.categorie_ruw || rij.naam
           ? matchCategorie(rij.categorie_ruw, categorieen ?? [], rij.naam)
           : null;
+
+        const genormaliseerdeNaam = rij.naam.toLowerCase().trim();
+        const bestaand = (rij.ean && eanMap.get(rij.ean)) ?? naamMap.get(genormaliseerdeNaam);
+
         if (!category_id) {
           overgeslagen++;
           if (voorbeeldenOvergeslagenCategorieen.size < 8) {
             voorbeeldenOvergeslagenCategorieen.add(rij.categorie_ruw || rij.naam);
           }
+          // Een BESTAAND, nog nooit door een admin bevestigd product dat nu
+          // geen categorie meer matcht (bijv. omdat een matching-fix een
+          // eerdere, foute match terecht heeft laten vervallen) moet niet
+          // stilzwijgend op zijn oude, foute categorie blijven staan —
+          // anders "heelt" de zelf-herstellende classificatie hierboven
+          // wel bij een verbeterde match, maar nooit bij een vervallen
+          // match. Zet 'm inactief i.p.v. te laten hangen met een
+          // achterhaalde categorie.
+          if (bestaand && !bestaand.geclassificeerd && bestaand.actief) {
+            // .has()-check vóór het zetten, anders telt hetzelfde bestaande
+            // product dubbel als meerdere feed-rijen (maat/kleur-varianten)
+            // ernaar verwijzen — zelfde patroon als dubbelOvergeslagen hierboven.
+            if (!teUpdaten.has(bestaand.id)) gedeactiveerd++;
+            teUpdaten.set(bestaand.id, { ...bestaand, actief: false });
+          }
           continue;
         }
-
-        const genormaliseerdeNaam = rij.naam.toLowerCase().trim();
-        const bestaand = (rij.ean && eanMap.get(rij.ean)) ?? naamMap.get(genormaliseerdeNaam);
 
         if (!bestaand) {
           // Alleen relevant voor NIEUWE producten: check of we deze naam
@@ -219,7 +235,11 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
       }
 
       const voorbeelden = Array.from(voorbeeldenOvergeslagenCategorieen);
-      const samenvatting = `${succes} verwerkt, ${overgeslagen} overgeslagen (categorie), ${dubbelOvergeslagen} dubbel overgeslagen, ${mislukt} mislukt (${ruweRijen.length} totaal)` +
+      // 'gedeactiveerd' zit al in zowel 'overgeslagen' (categorie kon niet
+      // meer gematcht worden) als 'succes' (de deactivatie-update zelf
+      // slaagde) — als apart getal eruit lichten voor een kloppend rapport
+      // i.p.v. impliciet dubbel meetellen.
+      const samenvatting = `${succes - gedeactiveerd} verwerkt, ${overgeslagen} overgeslagen (categorie, waarvan ${gedeactiveerd} bestaand product gedeactiveerd), ${dubbelOvergeslagen} dubbel overgeslagen, ${mislukt} mislukt (${ruweRijen.length} totaal)` +
         (voorbeelden.length > 0 ? ` — voorbeelden overgeslagen categorieën: ${voorbeelden.map((v) => `"${v}"`).join(", ")}` : "");
       resultaten[abo.naam] = samenvatting;
 
