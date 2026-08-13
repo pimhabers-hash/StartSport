@@ -3,7 +3,17 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ProductAfbeelding } from "@/components/ProductAfbeelding";
-import { MEERVOUDIGE_CATEGORIEEN, type CategorieOpties, type PakketProduct } from "@/lib/configurator-engine";
+import { MEERVOUDIGE_CATEGORIEEN, detecteerKleuren, type CategorieOpties, type PakketProduct } from "@/lib/configurator-engine";
+
+// CSS-kleur per herkende kleurnaam, voor het bolletje op de filterknop.
+// Alleen visueel — de eigenlijke match gebeurt op de Nederlandse naam.
+const KLEUR_CSS: Record<string, string> = {
+  Zwart: "#0A0B0D", Wit: "#F2EFE9", Blauw: "#3B6FD1", Rood: "#C0392B",
+  Groen: "#3E8E5A", Geel: "#E0C441", Grijs: "#8A8D93", Roze: "#E091B0",
+  Paars: "#8E5AC7", Oranje: "#D9822B", Bruin: "#7A5230", Beige: "#D9C7A3",
+  Kaki: "#8A8B5C", Goud: "#C6A15B", Zilver: "#B8BAC0",
+  Meerkleurig: "conic-gradient(#C0392B,#E0C441,#3E8E5A,#3B6FD1,#8E5AC7,#C0392B)",
+};
 
 interface PakketBuilderProps {
   categorieOpties: CategorieOpties[];
@@ -37,6 +47,22 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
   // meer" ontvouwt de rest.
   const STANDAARD_ZICHTBAAR = 4;
   const [uitgeklapt, setUitgeklapt] = useState<Set<string>>(new Set());
+
+  // Optioneel kleurfilter per categorie — er is geen apart kleurveld in de
+  // database, dus dit filtert op de kleur(en) die in de productnaam
+  // herkend worden. Puur een verfijning bovenop de al opgehaalde opties,
+  // geen extra configurator-vraag: lang niet elk product heeft een
+  // herkenbare kleur (voeding, supplementen, ballen meestal niet).
+  const [kleurFilter, setKleurFilter] = useState<Record<string, string>>({});
+
+  function kiesKleur(categoryId: string, kleur: string | null) {
+    setKleurFilter((k) => {
+      const nieuw = { ...k };
+      if (kleur) nieuw[categoryId] = kleur;
+      else delete nieuw[categoryId];
+      return nieuw;
+    });
+  }
 
   function toggleUitgeklapt(categoryId: string) {
     setUitgeklapt((u) => {
@@ -140,16 +166,27 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
           const isMeervoudig = MEERVOUDIGE_CATEGORIEEN.includes(c.category.slug);
           const actieveIds = selectie[c.category.id] ?? new Set<string>();
           const isUitgevinkt = uitgevinkt.has(c.category.id);
+
+          // Kleuren die daadwerkelijk voorkomen binnen déze categorie —
+          // filterknoppen alleen tonen als er meer dan 1 kleur te kiezen
+          // valt, anders voegt de rij niets toe.
+          const kleurenPerProduct = new Map(c.opties.map((p) => [p.id, detecteerKleuren(p.naam)]));
+          const beschikbareKleuren = [...new Set(c.opties.flatMap((p) => kleurenPerProduct.get(p.id) ?? []))];
+          const gekozenKleur = kleurFilter[c.category.id];
+          const optiesNaKleur = gekozenKleur
+            ? c.opties.filter((p) => (kleurenPerProduct.get(p.id) ?? []).includes(gekozenKleur))
+            : c.opties;
+
           // Automatisch uitgeklapt tonen als de klant iets buiten de
           // standaard-zichtbare opties heeft aangevinkt (bijv. optie 6) —
           // anders "verdwijnt" een gekozen product uit beeld zodra de
           // sectie weer inklapt, terwijl het rechts in het pakket blijft.
-          const heeftKeuzeBuitenStandaard = c.opties
+          const heeftKeuzeBuitenStandaard = optiesNaKleur
             .slice(STANDAARD_ZICHTBAAR)
             .some((p) => actieveIds.has(p.id));
           const toonAlles = uitgeklapt.has(c.category.id) || heeftKeuzeBuitenStandaard;
-          const zichtbareOpties = toonAlles ? c.opties : c.opties.slice(0, STANDAARD_ZICHTBAAR);
-          const verborgenAantal = c.opties.length - zichtbareOpties.length;
+          const zichtbareOpties = toonAlles ? optiesNaKleur : optiesNaKleur.slice(0, STANDAARD_ZICHTBAAR);
+          const verborgenAantal = optiesNaKleur.length - zichtbareOpties.length;
 
           return (
             <div key={c.category.id} className="animate-fade-up" style={{ animationDelay: `${i * 70}ms` }}>
@@ -183,6 +220,39 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
                 <p className="text-brand-muted text-xs font-body mb-4">
                   Kies er zoveel als je wilt, of sla deze categorie over.
                 </p>
+              )}
+
+              {/* Kleurfilter — alleen als er binnen deze categorie meer dan
+                  1 kleur te kiezen valt. Verfijnt alleen welke van de al
+                  opgehaalde opties zichtbaar zijn, geen nieuwe zoekopdracht. */}
+              {beschikbareKleuren.length > 1 && !isUitgevinkt && (
+                <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                  <span className="text-brand-muted text-[10px] font-mono uppercase tracking-widest mr-1">Kleur</span>
+                  <button
+                    onClick={() => kiesKleur(c.category.id, null)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-mono border transition-colors ${
+                      !gekozenKleur ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted hover:border-brand-gold/40"
+                    }`}
+                  >
+                    Alle
+                  </button>
+                  {beschikbareKleuren.map((kleur) => (
+                    <button
+                      key={kleur}
+                      onClick={() => kiesKleur(c.category.id, gekozenKleur === kleur ? null : kleur)}
+                      title={kleur}
+                      className={`flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full text-[11px] font-mono border transition-colors ${
+                        gekozenKleur === kleur ? "border-brand-gold text-brand-gold bg-brand-gold/5" : "border-brand-border text-brand-muted hover:border-brand-gold/40"
+                      }`}
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full border border-white/10 flex-shrink-0"
+                        style={{ background: KLEUR_CSS[kleur] ?? "#666" }}
+                      />
+                      {kleur}
+                    </button>
+                  ))}
+                </div>
               )}
 
               {/* Opties in deze categorie — horizontaal scrollend i.p.v. een
@@ -270,7 +340,7 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
                 )}
               </div>
 
-              {toonAlles && !heeftKeuzeBuitenStandaard && c.opties.length > STANDAARD_ZICHTBAAR && (
+              {toonAlles && !heeftKeuzeBuitenStandaard && optiesNaKleur.length > STANDAARD_ZICHTBAAR && (
                 <button
                   onClick={() => toggleUitgeklapt(c.category.id)}
                   className="mt-2 text-xs font-mono text-brand-muted hover:text-brand-ivory transition-colors"

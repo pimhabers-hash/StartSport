@@ -293,7 +293,10 @@ export function bepaalBudgetklasseVoorCategorie(
 // "mens"/"womens" apart erbij omdat het Engelse bezits-s ("Mens Shoe",
 // "Womens Jacket") anders geen eigen woordgrens rond "men"/"women" heeft.
 const GESLACHT_TREFWOORDEN: { geslacht: "man" | "vrouw"; patroon: RegExp }[] = [
-  { geslacht: "vrouw", patroon: /\b(women|womens|woman|dames|damen|mujer|femme|female|ladies)\b/i },
+  // Let op: GEEN kaal "man" hier (wel "mens"/"heren" etc.) — dat matcht
+  // ook op merchandise als "Spider-Man" (hyphen telt als woordgrens),
+  // getest tegen de echte catalogus en bevestigd als vals-positief risico.
+  { geslacht: "vrouw", patroon: /\b(women|womens|woman|dames|damen|mujer|femme|female|ladies|lady|vrouw|vrouwen|donna)\b/i },
   { geslacht: "man",   patroon: /\b(men|mens|heren|herren|hombre|homme|male)\b/i },
 ];
 

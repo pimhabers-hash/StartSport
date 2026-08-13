@@ -179,7 +179,7 @@ function productPastBijGeslacht(product: ProductMatcher, geslacht?: "man" | "vro
 // het losse woord "kind"/"kinderen" als aaneengeschreven samenstellingen
 // ("Kinderfiets", "Kinderbroeken", "Kinder-T-shirt"), net als de
 // vergelijkbare voorvoegsel-patronen elders in de matching-logica.
-const KINDERPRODUCT_PATROON = /\bkind\w*\b|\bjongens?\b|\bmeisjes?\b|\bjunior\b|\bkids?\b|\bchild(ren)?\b|\bboys?\b|\bgirls?\b/i;
+const KINDERPRODUCT_PATROON = /\bkind\w*\b|\bjongens?\b|\bmeisjes?\b|\bjunior\b|\bkids?\b|\bchild(ren)?\b|\bboys?\b|\bgirls?\b|\bbaby'?s?\b/i;
 
 /**
  * True als de productnaam herkenbaar een kinderproduct is. De
@@ -192,6 +192,42 @@ const KINDERPRODUCT_PATROON = /\bkind\w*\b|\bjongens?\b|\bmeisjes?\b|\bjunior\b|
  */
 function productIsVoorKinderen(product: ProductMatcher): boolean {
   return KINDERPRODUCT_PATROON.test(product.naam);
+}
+
+// Kleurherkenning uit de productnaam — er is geen apart "kleur"-veld in
+// de database, dus dit is een letterlijke woord-match, net als bij
+// geslacht/kinderproducten. "\w*blauw\b" (i.p.v. kaal "blauw") vangt ook
+// samenstellingen als "marineblauw"/"lichtblauw" onder dezelfde
+// hoofdkleur — een bewuste vereenvoudiging, geen apart lichtblauw/
+// donkerblauw-onderscheid.
+const KLEUR_TREFWOORDEN: { kleur: string; patroon: RegExp }[] = [
+  { kleur: "Zwart", patroon: /\bzwart\b/i },
+  { kleur: "Wit", patroon: /\bwit\b/i },
+  { kleur: "Blauw", patroon: /\b\w*blauw\b/i },
+  { kleur: "Rood", patroon: /\brood\b/i },
+  { kleur: "Groen", patroon: /\b\w*groen\b/i },
+  { kleur: "Geel", patroon: /\bgeel\b/i },
+  { kleur: "Grijs", patroon: /\bgrijs\b/i },
+  { kleur: "Roze", patroon: /\broze\b/i },
+  { kleur: "Paars", patroon: /\bpaars\b/i },
+  { kleur: "Oranje", patroon: /\boranje\b/i },
+  { kleur: "Bruin", patroon: /\bbruin\b/i },
+  { kleur: "Beige", patroon: /\bbeige\b/i },
+  { kleur: "Kaki", patroon: /\bkaki\b/i },
+  { kleur: "Goud", patroon: /\bgoud\b/i },
+  { kleur: "Zilver", patroon: /\bzilver\b/i },
+  { kleur: "Meerkleurig", patroon: /\b(multicolor|meerkleurig)\b/i },
+];
+
+/**
+ * Alle kleuren die in de productnaam herkend worden (kan er meer dan één
+ * zijn, bijv. "Red/White/Blue Stripe"). Puur voor een optioneel
+ * kleurfilter in de UI — telt niet mee in de match-score, want lang niet
+ * elk product heeft een herkenbare kleur (voeding, supplementen, ballen
+ * meestal niet).
+ */
+export function detecteerKleuren(naam: string): string[] {
+  return KLEUR_TREFWOORDEN.filter((k) => k.patroon.test(naam)).map((k) => k.kleur);
 }
 
 function berekenMatchScore(
