@@ -30,6 +30,22 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
   });
 
   const [uitgevinkt, setUitgevinkt] = useState<Set<string>>(new Set());
+  // Per categorie tonen we in eerste instantie maar een handvol opties —
+  // de configurator haalt er tot 8 op zodat een klant zelf meer kan
+  // aanvinken dan alleen de beste match, maar 8 kaarten per categorie
+  // direct allemaal tonen maakt de pagina onoverzichtelijk lang. "Toon
+  // meer" ontvouwt de rest.
+  const STANDAARD_ZICHTBAAR = 4;
+  const [uitgeklapt, setUitgeklapt] = useState<Set<string>>(new Set());
+
+  function toggleUitgeklapt(categoryId: string) {
+    setUitgeklapt((u) => {
+      const nieuw = new Set(u);
+      if (nieuw.has(categoryId)) nieuw.delete(categoryId);
+      else nieuw.add(categoryId);
+      return nieuw;
+    });
+  }
 
   function kiesProduct(categoryId: string, productId: string, isMeervoudig: boolean) {
     setSelectie((s) => {
@@ -124,6 +140,16 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
           const isMeervoudig = MEERVOUDIGE_CATEGORIEEN.includes(c.category.slug);
           const actieveIds = selectie[c.category.id] ?? new Set<string>();
           const isUitgevinkt = uitgevinkt.has(c.category.id);
+          // Automatisch uitgeklapt tonen als de klant iets buiten de
+          // standaard-zichtbare opties heeft aangevinkt (bijv. optie 6) —
+          // anders "verdwijnt" een gekozen product uit beeld zodra de
+          // sectie weer inklapt, terwijl het rechts in het pakket blijft.
+          const heeftKeuzeBuitenStandaard = c.opties
+            .slice(STANDAARD_ZICHTBAAR)
+            .some((p) => actieveIds.has(p.id));
+          const toonAlles = uitgeklapt.has(c.category.id) || heeftKeuzeBuitenStandaard;
+          const zichtbareOpties = toonAlles ? c.opties : c.opties.slice(0, STANDAARD_ZICHTBAAR);
+          const verborgenAantal = c.opties.length - zichtbareOpties.length;
 
           return (
             <div key={c.category.id} className="animate-fade-up" style={{ animationDelay: `${i * 70}ms` }}>
@@ -161,7 +187,7 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
 
               {/* Opties in deze categorie */}
               <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity ${isUitgevinkt ? "opacity-40 pointer-events-none" : ""}`}>
-                {c.opties.map((product) => {
+                {zichtbareOpties.map((product) => {
                   const isGeselecteerd = actieveIds.has(product.id) && !isUitgevinkt;
                   // Bij meervoudige categorieën (accessoires/voeding/vitaminen) staat
                   // niets vooraf geselecteerd, dus een "beste match"-badge zou daar
@@ -219,6 +245,23 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
                   );
                 })}
               </div>
+
+              {verborgenAantal > 0 && (
+                <button
+                  onClick={() => toggleUitgeklapt(c.category.id)}
+                  className="mt-3 text-xs font-mono text-brand-gold hover:text-brand-gold-light transition-colors"
+                >
+                  + Toon {verborgenAantal} meer optie{verborgenAantal !== 1 ? "s" : ""}
+                </button>
+              )}
+              {toonAlles && !heeftKeuzeBuitenStandaard && c.opties.length > STANDAARD_ZICHTBAAR && (
+                <button
+                  onClick={() => toggleUitgeklapt(c.category.id)}
+                  className="mt-3 text-xs font-mono text-brand-muted hover:text-brand-ivory transition-colors"
+                >
+                  Toon minder
+                </button>
+              )}
             </div>
           );
         })}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { groepeerPerCategorieMetOpties } from "@/lib/configurator-engine";
+import { groepeerPerCategorieMetOpties, UNIVERSELE_CATEGORIEEN } from "@/lib/configurator-engine";
 import { Navbar } from "@/components/home/Navbar";
 import { PakketBuilder } from "@/components/resultaat/PakketBuilder";
 import type { ErvaringNiveau, BudgetKlasse, GebruikFrequentie, BinnenBuiten } from "@/lib/supabase/database.types";
@@ -39,18 +39,70 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
 
   const supabase = await createClient();
 
-  const { data: rawProducten } = await supabase
-    .from("products")
-    .select(`
-      id, naam, merk, prijs, niveau, budgetklasse, sport_id,
-      geschikt_voor_frequentie, affiliate_url, afbeelding_url, uitleg, score, geslacht,
-      categories ( id, naam, slug ),
-      providers ( naam, slug, logo_url )
-    `)
-    .or(`sport_id.eq.${sport_id},sport_id.is.null`)
-    .eq("actief", true);
+  type RuweProductRij = {
+    id: string; naam: string; merk: string | null; prijs: number;
+    niveau: ErvaringNiveau[]; budgetklasse: BudgetKlasse; sport_id: string | null;
+    geschikt_voor_frequentie: GebruikFrequentie[]; affiliate_url: string;
+    afbeelding_url: string | null; uitleg: string | null; score: number;
+    geslacht: "man" | "vrouw" | "unisex" | null;
+    categories: { id: string; naam: string; slug: string } | { id: string; naam: string; slug: string }[] | null;
+    providers: { naam: string; slug: string; logo_url: string | null } | { naam: string; slug: string; logo_url: string | null }[] | null;
+  };
+  const PRODUCT_SELECT = `
+    id, naam, merk, prijs, niveau, budgetklasse, sport_id,
+    geschikt_voor_frequentie, affiliate_url, afbeelding_url, uitleg, score, geslacht,
+    categories ( id, naam, slug ),
+    providers ( naam, slug, logo_url )
+  `;
 
-  if (!rawProducten || rawProducten.length === 0) {
+  // Sport-specifieke producten: volledig gepagineerd ophalen (geen cap) —
+  // Supabase/PostgREST begrenst één select() standaard op 1000 rijen, en
+  // sommige sporten (Golf 1400+, Fietsen 2500+) gaan daar overheen.
+  const PAGINA_GROOTTE = 1000;
+  const rawProducten: RuweProductRij[] = [];
+  for (let vanaf = 0; ; vanaf += PAGINA_GROOTTE) {
+    const { data } = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .eq("sport_id", sport_id)
+      .eq("actief", true)
+      .order("id")
+      .range(vanaf, vanaf + PAGINA_GROOTTE - 1);
+    if (!data || data.length === 0) break;
+    rawProducten.push(...data);
+    if (data.length < PAGINA_GROOTTE) break;
+  }
+
+  // Universele producten (sport_id null, bijv. algemene kleding/tassen/
+  // voeding die voor élke sport bruikbaar is): NIET volledig ophalen —
+  // dat zijn er ruim 10.000 over de hele catalogus (elke sport levert
+  // z'n eigen "sportloze" voorraad), terwijl er toch maar top-8 per
+  // categorie getoond wordt. Per universele categorie apart een
+  // redelijke voorraad ophalen (i.p.v. één gezamenlijke cap) zodat een
+  // kleinere categorie (bijv. Tassen) niet wegvalt achter een veel
+  // grotere (Kleding heeft doorgaans het gros van de universele rijen).
+  const UNIVERSELE_CAP_PER_CATEGORIE = 300;
+  const { data: universeleCategorieen } = await supabase
+    .from("categories")
+    .select("id")
+    .in("slug", UNIVERSELE_CATEGORIEEN);
+  const universeleResultaten = await Promise.all(
+    (universeleCategorieen ?? []).map((cat) =>
+      supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .is("sport_id", null)
+        .eq("category_id", cat.id)
+        .eq("actief", true)
+        .order("id")
+        .limit(UNIVERSELE_CAP_PER_CATEGORIE)
+    )
+  );
+  universeleResultaten.forEach(({ data }) => {
+    if (data) rawProducten.push(...(data as RuweProductRij[]));
+  });
+
+  if (rawProducten.length === 0) {
     return (
       <>
         <Navbar />

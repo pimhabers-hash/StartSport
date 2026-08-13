@@ -103,7 +103,7 @@ export const DOEL_CATEGORIE_HINTS: Record<Doel, string[]> = {
  * nergens in de configurator verschijnen, ook al is het prima bruikbaar
  * voor elke sport.
  */
-const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen", "kleding", "tassen"];
+export const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen", "kleding", "tassen"];
 
 /**
  * Categorieën waarbij een klant logischerwijs nul, één, of meerdere
@@ -280,7 +280,7 @@ export interface CategorieOpties {
 export function groepeerPerCategorieMetOpties(
   alleProducten: ProductMatcher[],
   input: ConfiguratorInput,
-  maxOptiesPerCategorie = 4
+  maxOptiesPerCategorie = 8
 ): CategorieOpties[] {
   // Alleen producten die daadwerkelijk bij deze sport horen — voorkomt
   // dat universele producten (sport_id null, bijv. uit een brede feed
