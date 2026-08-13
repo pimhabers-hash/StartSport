@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OptieKaart } from "./OptieKaart";
-import { useWizard, type Doel, type Geslacht } from "./WizardContext";
+import { useWizard, type Doel } from "./WizardContext";
 
 const DOELEN: { waarde: Doel; label: string; omschrijving: string; icoon: string }[] = [
   { waarde: "sociaal",       label: "Sociaal",         omschrijving: "Ik wil het vooral gezellig hebben en nieuwe mensen ontmoeten.", icoon: "👥" },
@@ -13,14 +13,8 @@ const DOELEN: { waarde: Doel; label: string; omschrijving: string; icoon: string
   { waarde: "competitie",    label: "Competitie",      omschrijving: "Ik wil wedstrijden spelen en winnen.", icoon: "🏆" },
 ];
 
-const GESLACHTEN: { waarde: Geslacht; label: string }[] = [
-  { waarde: "man",    label: "Man" },
-  { waarde: "vrouw",  label: "Vrouw" },
-  { waarde: "anders", label: "Anders / geen voorkeur" },
-];
-
 export function Stap6Doel() {
-  const { state, setDoel, setGeslacht, isCompleet } = useWizard();
+  const { state, setDoel, isCompleet } = useWizard();
   const router = useRouter();
   const [samenstellen, setSamenstellen] = useState(false);
 
@@ -31,12 +25,11 @@ export function Stap6Doel() {
       sport_id:     state.sport.id,
       sport_slug:   state.sport.slug,
       sport_naam:   state.sport.naam,
+      geslacht:     state.geslacht!,
       niveau:       state.niveau!,
       budgetklasse: state.budgetklasse!,
       frequentie:   state.frequentie!,
-      binnen_buiten: state.binnen_buiten!,
       doel:         state.doel!,
-      ...(state.geslacht  ? { geslacht:  state.geslacht }  : {}),
     });
 
     // Korte anticipatie vóór de navigatie — laat het voelen alsof we
@@ -71,33 +64,6 @@ export function Stap6Doel() {
             onClick={() => setDoel(d.waarde)}
           />
         ))}
-      </div>
-
-      {/* Optionele vraag */}
-      <div className="border-t border-brand-border pt-6 mb-8 space-y-5">
-        <p className="text-brand-muted text-xs font-mono uppercase tracking-widest">
-          Optioneel — voor nog betere aanbevelingen
-        </p>
-
-        {/* Geslacht */}
-        <div>
-          <p className="text-brand-ivory text-sm font-body mb-3">Geslacht</p>
-          <div className="flex flex-wrap gap-2">
-            {GESLACHTEN.map((g) => (
-              <button
-                key={g.waarde}
-                onClick={() => setGeslacht(g.waarde)}
-                className={`px-4 py-2 rounded-xl text-sm font-body border transition-all ${
-                  state.geslacht === g.waarde
-                    ? "border-brand-gold bg-brand-gold/10 text-brand-gold"
-                    : "border-brand-border text-brand-muted hover:border-brand-gold/40"
-                }`}
-              >
-                {g.label}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Submit */}

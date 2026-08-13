@@ -15,13 +15,13 @@ const FREQUENTIES: {
   { waarde: "intensief",  label: "Intensief",  omschrijving: "Meerdere keren per week, serieus bezig.", icoon: "🔥" },
 ];
 
-export function Stap4Frequentie() {
+export function Stap5Frequentie() {
   const { state, setFrequentie } = useWizard();
 
   return (
     <div className="animate-fade-up">
       <p className="font-mono text-brand-gold text-xs uppercase tracking-widest mb-3">
-        Stap 4 van 6
+        Stap 5 van 6
       </p>
       <h2 className="font-display text-3xl lg:text-4xl text-brand-ivory mb-2">
         Hoe vaak ga je{" "}

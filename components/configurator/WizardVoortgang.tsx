@@ -1,24 +1,21 @@
 "use client";
 
-import { useWizard, isAltijdBuiten } from "./WizardContext";
+import { useWizard } from "./WizardContext";
 
 const STAPPEN = [
   { nr: 1, label: "Sport" },
-  { nr: 2, label: "Niveau" },
-  { nr: 3, label: "Budget" },
-  { nr: 4, label: "Gebruik" },
-  { nr: 5, label: "Locatie" },
+  { nr: 2, label: "Geslacht" },
+  { nr: 3, label: "Niveau" },
+  { nr: 4, label: "Budget" },
+  { nr: 5, label: "Gebruik" },
   { nr: 6, label: "Doel" },
 ];
 
 export function WizardVoortgang() {
   const { state } = useWizard();
   const eersteStap = state.sport !== null ? 2 : 1;
-  const overslaanBinnenBuiten = isAltijdBuiten(state.sport);
 
-  const zichtbareStappen = STAPPEN.filter(
-    (s) => s.nr >= eersteStap && !(overslaanBinnenBuiten && s.nr === 5)
-  );
+  const zichtbareStappen = STAPPEN.filter((s) => s.nr >= eersteStap);
 
   return (
     <div className="w-full max-w-lg mx-auto mb-10">

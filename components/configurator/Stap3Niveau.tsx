@@ -36,13 +36,13 @@ const NIVEAUS: {
   },
 ];
 
-export function Stap2Niveau() {
+export function Stap3Niveau() {
   const { state, setNiveau } = useWizard();
 
   return (
     <div className="animate-fade-up">
       <p className="font-mono text-brand-gold text-xs uppercase tracking-widest mb-3">
-        Stap 2 van 6
+        Stap 3 van 6
       </p>
       <h2 className="font-display text-3xl lg:text-4xl text-brand-ivory mb-2">
         Wat is je{" "}

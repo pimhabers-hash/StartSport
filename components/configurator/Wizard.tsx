@@ -3,10 +3,10 @@
 import { WizardProvider, useWizard, type WizardSport } from "./WizardContext";
 import { WizardVoortgang } from "./WizardVoortgang";
 import { Stap1Sport } from "./Stap1Sport";
-import { Stap2Niveau } from "./Stap2Niveau";
-import { Stap3Budget } from "./Stap3Budget";
-import { Stap4Frequentie } from "./Stap4Frequentie";
-import { Stap5BinnenBuiten } from "./Stap5BinnenBuiten";
+import { Stap2Geslacht } from "./Stap2Geslacht";
+import { Stap3Niveau } from "./Stap3Niveau";
+import { Stap4Budget } from "./Stap4Budget";
+import { Stap5Frequentie } from "./Stap5Frequentie";
 import { Stap6Doel } from "./Stap6Doel";
 
 function WizardInhoud({ sporten }: { sporten: WizardSport[] }) {
@@ -14,11 +14,11 @@ function WizardInhoud({ sporten }: { sporten: WizardSport[] }) {
   const eersteStap = state.sport !== null && state.stap >= 2 ? 2 : 1;
 
   const STAP_LABELS: Record<string, string> = {
+    man: "Man", vrouw: "Vrouw", anders: "Geen voorkeur",
     beginner: "Beginner", gemiddeld: "Gemiddeld",
     gevorderd: "Gevorderd", competitie: "Competitie",
     budget: "Budget", middenklasse: "Middenklasse", premium: "Premium",
     recreatief: "Recreatief", wekelijks: "Wekelijks", intensief: "Intensief",
-    binnen: "Binnen", buiten: "Buiten", beide: "Beide",
   };
 
   return (
@@ -28,10 +28,10 @@ function WizardInhoud({ sporten }: { sporten: WizardSport[] }) {
 
         <div className="card-surface rounded-2xl p-8">
           {state.stap === 1 && <Stap1Sport sporten={sporten} />}
-          {state.stap === 2 && <Stap2Niveau />}
-          {state.stap === 3 && <Stap3Budget />}
-          {state.stap === 4 && <Stap4Frequentie />}
-          {state.stap === 5 && <Stap5BinnenBuiten />}
+          {state.stap === 2 && <Stap2Geslacht />}
+          {state.stap === 3 && <Stap3Niveau />}
+          {state.stap === 4 && <Stap4Budget />}
+          {state.stap === 5 && <Stap5Frequentie />}
           {state.stap === 6 && <Stap6Doel />}
 
           {state.stap > eersteStap && (
@@ -51,10 +51,10 @@ function WizardInhoud({ sporten }: { sporten: WizardSport[] }) {
         {state.stap > 1 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {state.sport     && <Chip label={state.sport.naam} />}
+            {state.geslacht  && <Chip label={STAP_LABELS[state.geslacht] ?? state.geslacht} />}
             {state.niveau    && <Chip label={STAP_LABELS[state.niveau] ?? state.niveau} />}
             {state.budgetklasse && <Chip label={STAP_LABELS[state.budgetklasse] ?? state.budgetklasse} />}
             {state.frequentie && <Chip label={STAP_LABELS[state.frequentie] ?? state.frequentie} />}
-            {state.binnen_buiten && <Chip label={STAP_LABELS[state.binnen_buiten] ?? state.binnen_buiten} />}
           </div>
         )}
       </div>

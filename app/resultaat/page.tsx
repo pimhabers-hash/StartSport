@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { groepeerPerCategorieMetOpties, UNIVERSELE_CATEGORIEEN } from "@/lib/configurator-engine";
 import { Navbar } from "@/components/home/Navbar";
 import { PakketBuilder } from "@/components/resultaat/PakketBuilder";
-import type { ErvaringNiveau, BudgetKlasse, GebruikFrequentie, BinnenBuiten } from "@/lib/supabase/database.types";
+import type { ErvaringNiveau, BudgetKlasse, GebruikFrequentie } from "@/lib/supabase/database.types";
 import type { Doel } from "@/lib/configurator-engine";
 
 export const metadata = { title: "Jouw sportpakket — StartSport" };
@@ -24,7 +24,7 @@ const LABEL: Record<string, string> = {
 
 export default async function ResultaatPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const { sport_id, sport_naam, niveau, budgetklasse, frequentie, binnen_buiten, doel, geslacht } = params;
+  const { sport_id, sport_naam, niveau, budgetklasse, frequentie, doel, geslacht } = params;
 
   if (!sport_id || !niveau || !budgetklasse || !frequentie) {
     return (
@@ -138,13 +138,12 @@ export default async function ResultaatPage({ searchParams }: PageProps) {
     niveau: niveau as ErvaringNiveau,
     budgetklasse: budgetklasse as BudgetKlasse,
     frequentie: frequentie as GebruikFrequentie,
-    binnen_buiten: binnen_buiten as BinnenBuiten | undefined,
     doel: doel as Doel | undefined,
     geslacht: geslacht as "man" | "vrouw" | "anders" | undefined,
   });
 
   const geslachtChip = geslacht === "man" || geslacht === "vrouw" ? geslacht : null;
-  const chips = [niveau, budgetklasse, frequentie, binnen_buiten, doel, geslachtChip].filter(Boolean);
+  const chips = [niveau, budgetklasse, frequentie, doel, geslachtChip].filter(Boolean);
 
   return (
     <>

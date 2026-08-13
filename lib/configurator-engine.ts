@@ -175,6 +175,25 @@ function productPastBijGeslacht(product: ProductMatcher, geslacht?: "man" | "vro
   return product.geslacht === geslacht;
 }
 
+// Herkent kinderproducten aan de productnaam — "\bkind\w*\b" vangt zowel
+// het losse woord "kind"/"kinderen" als aaneengeschreven samenstellingen
+// ("Kinderfiets", "Kinderbroeken", "Kinder-T-shirt"), net als de
+// vergelijkbare voorvoegsel-patronen elders in de matching-logica.
+const KINDERPRODUCT_PATROON = /\bkind\w*\b|\bjongens?\b|\bmeisjes?\b|\bjunior\b|\bkids?\b|\bchild(ren)?\b|\bboys?\b|\bgirls?\b/i;
+
+/**
+ * True als de productnaam herkenbaar een kinderproduct is. De
+ * configurator is bedoeld voor volwassen sporters die hun eigen
+ * uitrusting samenstellen — een kindermaatje tussen de "beste match"-
+ * suggesties (bijv. een kinderfiets bij een volwassen fietspakket) hoort
+ * daar niet thuis. Uitgesloten in groepeerPerCategorieMetOpties
+ * hieronder i.p.v. verwijderd uit de catalogus: dezelfde producten
+ * blijven gewoon doorzoekbaar/filterbaar op de aanbiederspagina.
+ */
+function productIsVoorKinderen(product: ProductMatcher): boolean {
+  return KINDERPRODUCT_PATROON.test(product.naam);
+}
+
 function berekenMatchScore(
   product: ProductMatcher,
   input: ConfiguratorInput
@@ -284,9 +303,11 @@ export function groepeerPerCategorieMetOpties(
 ): CategorieOpties[] {
   // Alleen producten die daadwerkelijk bij deze sport horen — voorkomt
   // dat universele producten (sport_id null, bijv. uit een brede feed
-  // zonder vaste sport) voor élke sport meetellen.
+  // zonder vaste sport) voor élke sport meetellen. Kinderproducten
+  // worden hier ook uitgesloten: de configurator stelt een pakket samen
+  // voor de volwassen sporter zelf, geen kindermaatjes tussen de opties.
   const relevanteProducten = alleProducten.filter(
-    (p) => productHoortBijSport(p, input.sport_id) && productPastBijGeslacht(p, input.geslacht)
+    (p) => productHoortBijSport(p, input.sport_id) && productPastBijGeslacht(p, input.geslacht) && !productIsVoorKinderen(p)
   );
 
   const gescoord: PakketProduct[] = relevanteProducten.map((p) => ({
