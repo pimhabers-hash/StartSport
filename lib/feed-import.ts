@@ -257,7 +257,13 @@ export const CATEGORIE_BUDGET_GRENZEN: Record<string, { budget: number; midden: 
   sticks:                     { budget: 50,  midden: 120 },
   schoenen:                   { budget: 70,  midden: 110 },
   tassen:                     { budget: 60,  midden: 100 },
+  // Bovenkleding/onderkleding hergebruiken vooralsnog dezelfde grenzen
+  // als de oude gezamenlijke "kleding"-categorie — geen aparte
+  // percentielberekening beschikbaar sinds de opsplitsing, en beide
+  // prijzen doorgaans vergelijkbaar.
   kleding:                    { budget: 29,  midden: 48 },
+  bovenkleding:               { budget: 29,  midden: 48 },
+  onderkleding:               { budget: 29,  midden: 48 },
   ballen:                     { budget: 7,   midden: 18 },
   accessoires:                { budget: 13,  midden: 20 },
   bescherming:                { budget: 14,  midden: 21 },
@@ -307,22 +313,35 @@ function mapGeslachtVeld(ruw: string): "man" | "vrouw" | "unisex" | null {
 
 /**
  * Probeert het geslacht (man/vrouw/unisex) te bepalen. Volgorde van
- * betrouwbaarheid: eerst een schoon gender_target-veld als de feed dat
- * meelevert, anders de productnaam, met de ruwe feed-categorie als extra
- * bron. "vrouw" wordt vóór "man" gecheckt, omdat "women" anders per
- * ongeluk zou matchen op het "men"-patroon. De categorie is nodig omdat
- * sommige aanbieders (bijv. Training Fit, een Awin-feed met Franse
- * categorietaxonomie) het geslacht nauwelijks in de productnaam zelf
- * vermelden ("Damesbeha", geen "Homme"/"Femme"), maar wel betrouwbaar in
- * elke categorie ("Multisports > Brassière > Adulte > Femme") — zonder
- * die extra bron zou zo'n feed bijna alles als "unisex" registreren.
+ * betrouwbaarheid: een schoon gender_target-veld dat expliciet "man" of
+ * "vrouw" zegt is het meest betrouwbaar en wint altijd. Een "unisex" (of
+ * onherkende/lege) waarde uit dat veld wordt NIET meteen als eindantwoord
+ * genomen — in de praktijk blijkt dat bij sommige aanbieders (Jumbo
+ * Sports, Padel Market) vaak gewoon een luie standaardwaarde in de
+ * broninnen is, ook voor producten die in hun eigen naam overduidelijk
+ * "Heren"/"Dames" zeggen (bijv. "Wilson D7 Xs Fairwaywood Heren" kreeg zo
+ * ten onrechte "unisex"). Bij een onduidelijk/leeg veld valt het dus
+ * alsnog terug op de productnaam/-categorie hieronder, en pas als ook
+ * dáár niets gevonden wordt, is "unisex" de uitkomst.
+ *
+ * Voor de naam/categorie-tekst: "vrouw" wordt vóór "man" gecheckt, omdat
+ * "women" anders per ongeluk op het "men"-patroon zou matchen. De
+ * categorie is nodig omdat sommige aanbieders (bijv. Training Fit, een
+ * Awin-feed met Franse categorietaxonomie) het geslacht nauwelijks in de
+ * productnaam zelf vermelden ("Damesbeha", geen "Homme"/"Femme"), maar
+ * wel betrouwbaar in elke categorie ("Multisports > Brassière > Adulte >
+ * Femme"). De tekst wordt ook door de sport/algemene voorvoegsel-losknip
+ * gehaald (zelfde mechanisme als bij categorie-matching): zonder die stap
+ * heeft "dames"/"heren" in een aaneengeschreven woord als "Damesbadpak"
+ * of "Herenbroek" geen eigen woordgrens en wordt het gemist — dit bleek
+ * de hoofdoorzaak van Decathlons extreem hoge unisex-percentage (76%).
  */
 export function detecteerGeslacht(naam: string, categorieRuw: string = "", geslachtVeld: string = ""): "man" | "vrouw" | "unisex" {
   if (geslachtVeld) {
     const uitVeld = mapGeslachtVeld(geslachtVeld);
-    if (uitVeld) return uitVeld;
+    if (uitVeld === "man" || uitVeld === "vrouw") return uitVeld;
   }
-  const tekst = `${naam} ${categorieRuw}`;
+  const tekst = loskoppelSportVoorvoegsel(`${naam} ${categorieRuw}`);
   for (const { geslacht, patroon } of GESLACHT_TREFWOORDEN) {
     if (patroon.test(tekst)) return geslacht;
   }
@@ -381,19 +400,32 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   // betrouwbare, specifieke variant.
   ballen:       ["bal", "ballen", "ball", "bola", "pelota"],
   tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack", "stickbag", "cartbag", "standbag"],
-  kleding:      [
-    "kleding", "cloth", "clothing", "apparel", "ropa", "camiseta", "textil",
-    "shirt", "tshirt", "t-shirt", "maillot",
-    "short", "pant", "pantalon", "trouser", "broek", "jogbroek",
+  // Kleding is opgesplitst in Bovenkleding/Onderkleding (op klantverzoek,
+  // zodat je zelf uit shirts vs. broeken kunt kiezen i.p.v. één gemengde
+  // stapel) — "kleding" zelf blijft bestaan als restcategorie voor
+  // kledingstukken die geen boven- of onderstuk zijn (hele pakken,
+  // jurken, zwemkleding, wetsuits): die vallen niet eerlijk in één van
+  // de twee te verdelen.
+  bovenkleding: [
+    "shirt", "tshirt", "t-shirt", "maillot", "camiseta",
     "jacket", "chaqueta", "veste",
-    "sweat", "sweater", "sweatshirt", "hoodie", "hooded", "sudadera", "polaire", "fleece",
-    "polo", "tank", "skirt", "falda", "dress", "vestido", "skort",
-    "legging", "brassiere", "beha", "bra",
+    "sweat", "sweater", "sweatshirt", "hoodie", "hooded", "sudadera", "polaire", "fleece", "trui",
+    "polo", "tank", "brassiere", "beha", "bra",
+  ],
+  onderkleding: [
+    "short", "pant", "pantalon", "trouser", "broek", "jogbroek", "joggingbroek",
+    "skirt", "falda", "skort", "legging", "boardshort", "boardshorts",
+  ],
+  kleding:      [
+    "kleding", "cloth", "clothing", "apparel", "ropa", "textil",
+    "dress", "vestido",
     // Samengestelde Nederlandse woorden — "kleding" heeft er middenin
     // geen eigen woordgrens (zelfde probleem als eerder bij "boks..."),
-    // dus expliciet de vormen die in de praktijk veel voorkomen.
+    // dus expliciet de vormen die in de praktijk veel voorkomen. Dit
+    // zijn allemaal hele/eendelige kledingstukken, vandaar de
+    // restcategorie i.p.v. bovenkleding/onderkleding.
     "badkleding", "zwemkleding", "strandkleding", "surfkleding", "turnkleding",
-    "zonbescherming", "turnpakje", "turnpakjes", "wetsuit", "boardshort", "boardshorts",
+    "zonbescherming", "turnpakje", "turnpakjes", "wetsuit", "badpak", "badpakken", "jurk", "jurkje",
   ],
   accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "chaussette", "sok", "sokken", "cap", "gorra", "strip", "hoes", "cover", "funda", "taskar", "taskarren", "tasaccessoire", "tasaccessoires"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
@@ -502,7 +534,7 @@ function bevatAlsWoord(tekst: string, trefwoord: string): boolean {
 // (dat beschrijft alleen waar de tas voor bedoeld is). Door "tassen" en
 // "schoenen" vóór "racket" te checken, wint de juiste, specifiekere
 // categorie in plaats van het eerst-gevonden woord.
-const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "kleding", "ballen", "vitaminen-en-supplementen", "accessoires", "voeding", "bescherming", "racket", "clubs", "sticks", "boards", "fietsen-categorie"];
+const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "bovenkleding", "onderkleding", "kleding", "ballen", "vitaminen-en-supplementen", "accessoires", "voeding", "bescherming", "racket", "clubs", "sticks", "boards", "fietsen-categorie"];
 
 export function matchCategorie(
   ruweTekst: string,

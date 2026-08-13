@@ -78,8 +78,8 @@ const GEWICHT = {
  * klaar om later AI-weging op te zetten.
  */
 export const DOEL_CATEGORIE_HINTS: Record<Doel, string[]> = {
-  gezond_blijven: ["schoenen", "kleding"],
-  afvallen:       ["schoenen", "kleding", "accessoires"],
+  gezond_blijven: ["schoenen", "bovenkleding", "onderkleding", "kleding"],
+  afvallen:       ["schoenen", "bovenkleding", "onderkleding", "kleding", "accessoires"],
   competitie:     ["racket", "clubs", "sticks", "boards", "fietsen-categorie", "schoenen", "accessoires"],
   sociaal:        ["tas", "kleding"],
   prestatie:      ["racket", "clubs", "sticks", "boards", "fietsen-categorie", "schoenen", "accessoires"],
@@ -103,7 +103,7 @@ export const DOEL_CATEGORIE_HINTS: Record<Doel, string[]> = {
  * nergens in de configurator verschijnen, ook al is het prima bruikbaar
  * voor elke sport.
  */
-export const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen", "kleding", "tassen"];
+export const UNIVERSELE_CATEGORIEEN = ["voeding", "vitaminen-en-supplementen", "bovenkleding", "onderkleding", "kleding", "tassen"];
 
 /**
  * Categorieën waarbij een klant logischerwijs nul, één, of meerdere
@@ -128,7 +128,7 @@ export const MEERVOUDIGE_CATEGORIEEN = ["accessoires", "voeding", "vitaminen-en-
  * vaste lijst.
  */
 const CATEGORIE_VOLGORDE = [
-  "kleding", "schoenen", "racket", "clubs", "sticks", "boards", "fietsen-categorie", "ballen", "tassen", "bescherming",
+  "bovenkleding", "onderkleding", "kleding", "schoenen", "racket", "clubs", "sticks", "boards", "fietsen-categorie", "ballen", "tassen", "bescherming",
   "voeding", "vitaminen-en-supplementen", "accessoires",
 ];
 

@@ -185,8 +185,14 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
                 </p>
               )}
 
-              {/* Opties in deze categorie */}
-              <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity ${isUitgevinkt ? "opacity-40 pointer-events-none" : ""}`}>
+              {/* Opties in deze categorie — horizontaal scrollend i.p.v. een
+                  grid: op deze manier past "toon meer" als tegel rechts in
+                  dezelfde rij, en onthult een klik daarop de rest van de
+                  opties door verder naar rechts te kunnen slepen/scrollen,
+                  in plaats van de pagina verticaal te verlengen. */}
+              <div
+                className={`flex gap-4 overflow-x-auto snap-x snap-proximity pb-2 -mx-6 px-6 sm:mx-0 sm:px-0 transition-opacity ${isUitgevinkt ? "opacity-40 pointer-events-none" : ""}`}
+              >
                 {zichtbareOpties.map((product) => {
                   const isGeselecteerd = actieveIds.has(product.id) && !isUitgevinkt;
                   // Bij meervoudige categorieën (accessoires/voeding/vitaminen) staat
@@ -198,7 +204,7 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
                     <button
                       key={product.id}
                       onClick={() => kiesProduct(c.category.id, product.id, isMeervoudig)}
-                      className={`group text-left rounded-2xl overflow-hidden border transition-all duration-200 min-w-0 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 ${
+                      className={`group text-left rounded-2xl overflow-hidden border transition-all duration-200 flex-shrink-0 w-[190px] sm:w-[210px] snap-start hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 ${
                         isGeselecteerd
                           ? "border-brand-gold bg-brand-gold/5 shadow-lg shadow-brand-gold/10"
                           : "border-brand-border bg-brand-card hover:border-brand-gold/30"
@@ -209,7 +215,7 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
                         <ProductAfbeelding
                           src={product.afbeelding_url}
                           alt={product.naam}
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
+                          sizes="210px"
                           className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
                         />
                         {isBesteMatch && (
@@ -244,20 +250,30 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
                     </button>
                   );
                 })}
+
+                {/* "Toon meer"-tegel rechts in de rij i.p.v. een losse knop
+                    eronder — klikken voegt de rest van de opties toe aan
+                    dezelfde rij, waarna je verder naar rechts kunt slepen/
+                    scrollen om ze te zien. */}
+                {verborgenAantal > 0 && (
+                  <button
+                    onClick={() => toggleUitgeklapt(c.category.id)}
+                    className="flex-shrink-0 w-[130px] snap-start rounded-2xl border border-dashed border-brand-gold/30 bg-brand-card/40 flex flex-col items-center justify-center gap-2 text-brand-gold hover:bg-brand-gold/5 hover:border-brand-gold/60 transition-colors"
+                  >
+                    <svg viewBox="0 0 16 16" fill="none" className="w-5 h-5">
+                      <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                    <span className="text-xs font-mono text-center px-3 leading-snug">
+                      Toon {verborgenAantal} meer
+                    </span>
+                  </button>
+                )}
               </div>
 
-              {verborgenAantal > 0 && (
-                <button
-                  onClick={() => toggleUitgeklapt(c.category.id)}
-                  className="mt-3 text-xs font-mono text-brand-gold hover:text-brand-gold-light transition-colors"
-                >
-                  + Toon {verborgenAantal} meer optie{verborgenAantal !== 1 ? "s" : ""}
-                </button>
-              )}
               {toonAlles && !heeftKeuzeBuitenStandaard && c.opties.length > STANDAARD_ZICHTBAAR && (
                 <button
                   onClick={() => toggleUitgeklapt(c.category.id)}
-                  className="mt-3 text-xs font-mono text-brand-muted hover:text-brand-ivory transition-colors"
+                  className="mt-2 text-xs font-mono text-brand-muted hover:text-brand-ivory transition-colors"
                 >
                   Toon minder
                 </button>
