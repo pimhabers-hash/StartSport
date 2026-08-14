@@ -86,6 +86,25 @@ const SPORT_TREFWOORDEN: Record<string, string[]> = {
   ],
 };
 
+// Losse sport-trefwoorden als "run" en "marathon" zijn hard nodig voor
+// echte hardloopproducten (235 resp. 17 treffers in productie, van
+// "Jas adidas Own the Run" tot "Sokken BV Sport Run Marathon +") en
+// mogen dus niet verwijderd worden. Maar diezelfde woorden zijn ook
+// merk-/productlijnnamen in de fietswereld: "Run Ride" is Decathlons
+// merk voor kinderloopfietsjes, en "Schwalbe Marathon" is een
+// fietsbandenmodel — beide leverden zo per ongeluk Hardlopen-sport op
+// voor fietsonderdelen. Net als bij de eerdere "nina"/bare-"man"
+// false-positives (zie feed-import.ts) lossen we dit gericht op met een
+// uitsluitingslijst i.p.v. het trefwoord zelf te verzwakken.
+const SPORT_UITSLUITINGEN: Partial<Record<string, RegExp[]>> = {
+  hardlopen: [
+    /\bloopfietsje\b/i,
+    /\bschwalbe\b/i,
+    /\b\d{2,3}x\d{2}c?\b/i, // fietsbandmaat, bijv. 700x42 / 700x45c
+    /\b\d{2}-\d{3}\b/, // ETRTO-bandmaat, bijv. 47-622 / 40-305
+  ],
+};
+
 /**
  * Probeert een sport te herkennen in vrije tekst (bijv. productnaam +
  * ruwe feed-categorie) — voor universele feeds/imports zonder vaste
@@ -111,6 +130,8 @@ export function matchSport(tekst: string, sporten: Sport[]): string | null {
     for (const sport of sporten) {
       const trefwoorden = SPORT_TREFWOORDEN[sport.slug];
       if (!trefwoorden) continue;
+      const uitsluitingen = SPORT_UITSLUITINGEN[sport.slug];
+      if (uitsluitingen?.some((patroon) => patroon.test(kandidaat))) continue;
       if (trefwoorden.some((woord) => bevatAlsWoord(kandidaat, woord))) {
         return sport.id;
       }
