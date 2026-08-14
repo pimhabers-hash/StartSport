@@ -64,6 +64,20 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
     });
   }
 
+  // Optioneel merkfilter per categorie — anders dan kleur staat het merk
+  // gewoon als los veld op het product (geen naam-detectie nodig), dus
+  // dit filtert rechtstreeks op product.merk.
+  const [merkFilter, setMerkFilter] = useState<Record<string, string>>({});
+
+  function kiesMerk(categoryId: string, merk: string | null) {
+    setMerkFilter((m) => {
+      const nieuw = { ...m };
+      if (merk) nieuw[categoryId] = merk;
+      else delete nieuw[categoryId];
+      return nieuw;
+    });
+  }
+
   function toggleUitgeklapt(categoryId: string) {
     setUitgeklapt((u) => {
       const nieuw = new Set(u);
@@ -177,16 +191,25 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
             ? c.opties.filter((p) => (kleurenPerProduct.get(p.id) ?? []).includes(gekozenKleur))
             : c.opties;
 
+          // Merken die voorkomen binnen de na-kleur gefilterde opties —
+          // zo blijft de merklijst kloppen met wat er nog te kiezen valt
+          // als er ook al op kleur is gefilterd.
+          const beschikbareMerken = [...new Set(optiesNaKleur.map((p) => p.merk).filter((m): m is string => !!m))].sort();
+          const gekozenMerk = merkFilter[c.category.id];
+          const optiesNaMerk = gekozenMerk
+            ? optiesNaKleur.filter((p) => p.merk === gekozenMerk)
+            : optiesNaKleur;
+
           // Automatisch uitgeklapt tonen als de klant iets buiten de
           // standaard-zichtbare opties heeft aangevinkt (bijv. optie 6) —
           // anders "verdwijnt" een gekozen product uit beeld zodra de
           // sectie weer inklapt, terwijl het rechts in het pakket blijft.
-          const heeftKeuzeBuitenStandaard = optiesNaKleur
+          const heeftKeuzeBuitenStandaard = optiesNaMerk
             .slice(STANDAARD_ZICHTBAAR)
             .some((p) => actieveIds.has(p.id));
           const toonAlles = uitgeklapt.has(c.category.id) || heeftKeuzeBuitenStandaard;
-          const zichtbareOpties = toonAlles ? optiesNaKleur : optiesNaKleur.slice(0, STANDAARD_ZICHTBAAR);
-          const verborgenAantal = optiesNaKleur.length - zichtbareOpties.length;
+          const zichtbareOpties = toonAlles ? optiesNaMerk : optiesNaMerk.slice(0, STANDAARD_ZICHTBAAR);
+          const verborgenAantal = optiesNaMerk.length - zichtbareOpties.length;
 
           return (
             <div key={c.category.id} className="animate-fade-up" style={{ animationDelay: `${i * 70}ms` }}>
@@ -250,6 +273,35 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
                         style={{ background: KLEUR_CSS[kleur] ?? "#666" }}
                       />
                       {kleur}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Merkfilter — alleen als er binnen deze categorie meer dan
+                  1 merk te kiezen valt. Filtert rechtstreeks op product.merk,
+                  net als de kleurfilter puur een verfijning van de al
+                  opgehaalde opties. */}
+              {beschikbareMerken.length > 1 && !isUitgevinkt && (
+                <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                  <span className="text-brand-muted text-[10px] font-mono uppercase tracking-widest mr-1">Merk</span>
+                  <button
+                    onClick={() => kiesMerk(c.category.id, null)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-mono border transition-colors ${
+                      !gekozenMerk ? "border-brand-gold text-brand-gold" : "border-brand-border text-brand-muted hover:border-brand-gold/40"
+                    }`}
+                  >
+                    Alle
+                  </button>
+                  {beschikbareMerken.map((merk) => (
+                    <button
+                      key={merk}
+                      onClick={() => kiesMerk(c.category.id, gekozenMerk === merk ? null : merk)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-mono border transition-colors ${
+                        gekozenMerk === merk ? "border-brand-gold text-brand-gold bg-brand-gold/5" : "border-brand-border text-brand-muted hover:border-brand-gold/40"
+                      }`}
+                    >
+                      {merk}
                     </button>
                   ))}
                 </div>
@@ -340,7 +392,7 @@ export function PakketBuilder({ categorieOpties, sportSlug }: PakketBuilderProps
                 )}
               </div>
 
-              {toonAlles && !heeftKeuzeBuitenStandaard && optiesNaKleur.length > STANDAARD_ZICHTBAAR && (
+              {toonAlles && !heeftKeuzeBuitenStandaard && optiesNaMerk.length > STANDAARD_ZICHTBAAR && (
                 <button
                   onClick={() => toggleUitgeklapt(c.category.id)}
                   className="mt-2 text-xs font-mono text-brand-muted hover:text-brand-ivory transition-colors"

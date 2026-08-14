@@ -8,7 +8,7 @@ import { FilterDropdown } from "@/components/aanbieders/FilterDropdown";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ sport?: string; categorie?: string; geslacht?: string; sorteer?: string; pagina?: string }>;
+  searchParams: Promise<{ sport?: string; categorie?: string; geslacht?: string; merk?: string; sorteer?: string; pagina?: string }>;
 }
 
 const SORTEER_OPTIES = [
@@ -78,9 +78,48 @@ async function haalProviderFacetten(
   return { sportTellingen, categorieTellingen, geslachtTellingen };
 }
 
+/**
+ * Merk-facetten: anders dan sport/categorie (een vaste, korte lijst) kan
+ * een aanbieder tientallen tot honderden verschillende merken voeren —
+ * een losse COUNT-query per merk zou dan zelf weer een lange rij
+ * round-trips worden. In plaats daarvan halen we alleen de "merk"-kolom
+ * op (geen volledige productrijen, dus licht qua payload) en tellen we
+ * in JS. Eerst een COUNT om te weten hoeveel pagina's nodig zijn, dan
+ * alle pagina's tegelijk met Promise.all — bij een grote catalogus
+ * (Decathlon: 12.000+ producten, 13 pagina's) scheelt dat merkbaar
+ * t.o.v. dezelfde pagina's ná elkaar ophalen (sequentieel duurde dit
+ * ~1,4s extra bovenop de rest van de pagina, parallel nog maar een
+ * fractie daarvan).
+ */
+async function haalMerkFacetten(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  providerId: string
+) {
+  const PAGINA = 1000;
+  const basisQuery = () =>
+    supabase.from("products").select("merk", { count: "exact" }).eq("provider_id", providerId).eq("actief", true).not("merk", "is", null);
+
+  const { count } = await basisQuery().range(0, 0);
+  const totaal = count ?? 0;
+  const aantalPaginas = Math.max(1, Math.ceil(totaal / PAGINA));
+
+  const paginas = await Promise.all(
+    Array.from({ length: aantalPaginas }, (_, i) => basisQuery().range(i * PAGINA, i * PAGINA + PAGINA - 1))
+  );
+
+  const tellingen = new Map<string, number>();
+  paginas.forEach(({ data }) => {
+    (data ?? []).forEach((p) => {
+      if (!p.merk) return;
+      tellingen.set(p.merk, (tellingen.get(p.merk) ?? 0) + 1);
+    });
+  });
+  return tellingen;
+}
+
 export default async function AanbiederProductenPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const { sport: sportFilter, categorie: categorieFilter, geslacht: geslachtFilter, sorteer: sorteerParam, pagina: paginaParam } = await searchParams;
+  const { sport: sportFilter, categorie: categorieFilter, geslacht: geslachtFilter, merk: merkFilter, sorteer: sorteerParam, pagina: paginaParam } = await searchParams;
   const sorteer = SORTEER_OPTIES.some((o) => o.waarde === sorteerParam) ? sorteerParam! : "relevantie";
   const supabase = await createClient();
 
@@ -125,15 +164,17 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
   if (geslachtFilter === "man" || geslachtFilter === "vrouw") {
     query = query.eq("geslacht", geslachtFilter);
   }
+  if (merkFilter) query = query.eq("merk", merkFilter);
 
   const huidigePagina = Math.max(1, parseInt(paginaParam ?? "1", 10) || 1);
   const vanaf = (huidigePagina - 1) * PAGINA_GROOTTE;
 
   // Productenpagina en facet-tellingen zijn onafhankelijk van elkaar —
   // ook deze parallel i.p.v. na elkaar ophalen.
-  const [{ data: producten, count }, { sportTellingen, categorieTellingen, geslachtTellingen }] = await Promise.all([
+  const [{ data: producten, count }, { sportTellingen, categorieTellingen, geslachtTellingen }, merkTellingen] = await Promise.all([
     query.range(vanaf, vanaf + PAGINA_GROOTTE - 1),
     haalProviderFacetten(supabase, provider.id, sporten ?? [], categorieen ?? []),
+    haalMerkFacetten(supabase, provider.id),
   ]);
 
   // Alleen sporten/categorieën tonen die deze aanbieder ook echt voert.
@@ -143,6 +184,9 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
   const relevanteCategorieen = (categorieen ?? [])
     .filter((c) => categorieTellingen.has(c.slug))
     .map((c) => ({ ...c, aantal: categorieTellingen.get(c.slug)!.aantal }));
+  const relevanteMerken = [...merkTellingen.entries()]
+    .map(([merk, aantal]) => ({ merk, aantal }))
+    .sort((a, b) => a.merk.localeCompare(b.merk));
 
   const totaalProducten = count ?? 0;
   const aantalPaginas = Math.max(1, Math.ceil(totaalProducten / PAGINA_GROOTTE));
@@ -171,22 +215,23 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
               combineren zijn. Een filter- of sorteerwissel reset bewust
               de paginering (nieuwe resultatenset = terug naar pagina 1). */}
           {(() => {
-            function hrefMet(overrides: { sport?: string; categorie?: string; geslacht?: string; sorteer?: string }) {
+            function hrefMet(overrides: { sport?: string; categorie?: string; geslacht?: string; merk?: string; sorteer?: string }) {
               const waarden = {
-                sport: sportFilter, categorie: categorieFilter, geslacht: geslachtFilter, sorteer,
+                sport: sportFilter, categorie: categorieFilter, geslacht: geslachtFilter, merk: merkFilter, sorteer,
                 ...overrides,
               };
               const params = new URLSearchParams();
               if (waarden.sport) params.set("sport", waarden.sport);
               if (waarden.categorie) params.set("categorie", waarden.categorie);
               if (waarden.geslacht) params.set("geslacht", waarden.geslacht);
+              if (waarden.merk) params.set("merk", waarden.merk);
               if (waarden.sorteer && waarden.sorteer !== "relevantie") params.set("sorteer", waarden.sorteer);
               const query = params.toString();
               return `/aanbieders/${slug}${query ? `?${query}` : ""}`;
             }
 
             const heeftGeslachtsfilter = geslachtTellingen.man > 0 || geslachtTellingen.vrouw > 0;
-            const heeftActiefFilter = Boolean(sportFilter || categorieFilter || geslachtFilter);
+            const heeftActiefFilter = Boolean(sportFilter || categorieFilter || geslachtFilter || merkFilter);
 
             return (
               <div className="space-y-3 mb-8">
@@ -225,9 +270,24 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                       ]}
                     />
                   )}
+                  {relevanteMerken.length > 1 && (
+                    <FilterDropdown
+                      label="Merk"
+                      huidigeLabel={relevanteMerken.find((m) => m.merk === merkFilter)?.merk ?? "Alles"}
+                      opties={[
+                        { label: "Alles", href: hrefMet({ merk: undefined }), actief: !merkFilter },
+                        ...relevanteMerken.map((m) => ({
+                          label: m.merk,
+                          href: hrefMet({ merk: merkFilter === m.merk ? undefined : m.merk }),
+                          actief: merkFilter === m.merk,
+                          aantal: m.aantal,
+                        })),
+                      ]}
+                    />
+                  )}
                   {heeftActiefFilter && (
                     <Link
-                      href={hrefMet({ sport: undefined, categorie: undefined, geslacht: undefined })}
+                      href={hrefMet({ sport: undefined, categorie: undefined, geslacht: undefined, merk: undefined })}
                       className="px-3 py-1.5 rounded-lg text-xs font-mono text-brand-muted hover:text-brand-ivory transition-colors"
                     >
                       Filters wissen ✕
@@ -326,6 +386,7 @@ export default async function AanbiederProductenPage({ params, searchParams }: P
                   if (sportFilter) params.set("sport", sportFilter);
                   if (categorieFilter) params.set("categorie", categorieFilter);
                   if (geslachtFilter) params.set("geslacht", geslachtFilter);
+                  if (merkFilter) params.set("merk", merkFilter);
                   if (sorteer !== "relevantie") params.set("sorteer", sorteer);
                   if (p > 1) params.set("pagina", String(p));
                   const query = params.toString();
