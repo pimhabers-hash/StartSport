@@ -6,7 +6,13 @@ import { PakketBuilder } from "@/components/resultaat/PakketBuilder";
 import type { ErvaringNiveau, BudgetKlasse, GebruikFrequentie } from "@/lib/supabase/database.types";
 import type { Doel } from "@/lib/configurator-engine";
 
-export const metadata = { title: "Jouw sportpakket — StartSport" };
+// Elke bezoeker krijgt een eigen combinatie van queryparams (sport,
+// niveau, budget, geslacht, ...) — geen twee bezoekers zien dezelfde
+// inhoud op dezelfde URL, dus dit als doorzoekbare paginacontent laten
+// indexeren levert alleen dunne/duplicate content op. Noindex i.p.v.
+// robots.txt-disallow, zodat links naar aanbieders vanaf deze pagina
+// nog wel gevolgd worden.
+export const metadata = { title: "Jouw sportpakket — StartSport", robots: { index: false, follow: true } };
 
 interface PageProps {
   searchParams: Promise<Record<string, string>>;

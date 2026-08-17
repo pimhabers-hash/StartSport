@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/home/Navbar";
 import { Wizard } from "@/components/configurator/Wizard";
 
-export const metadata = { title: "Configurator — StartSport" };
+export const metadata = { title: "Configurator — StartSport", alternates: { canonical: "/configurator" } };
 
 interface PageProps {
   searchParams: Promise<{ sport?: string }>;

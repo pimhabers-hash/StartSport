@@ -5,14 +5,22 @@ import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { TradeTrackerTag } from "@/components/analytics/TradeTrackerTag";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://startsport.nl"),
+  // Moet overeenkomen met het domein waar de site daadwerkelijk op
+  // draait (Vercel stuurt het kale startsport.nl met een 308-redirect
+  // door naar www) — anders wijst elke canonieke/OG/sitemap-verwijzing
+  // naar een URL die zelf weer doorstuurt, wat Google in de war brengt
+  // over welke versie de "echte" is.
+  metadataBase: new URL("https://www.startsport.nl"),
   title: "StartSport — Vind jouw perfecte sportuitrusting",
   description:
     "StartSport helpt je in enkele stappen naar een compleet, persoonlijk samengesteld sportpakket.",
+  alternates: {
+    canonical: "https://www.startsport.nl",
+  },
   openGraph: {
     title: "StartSport — Vind jouw perfecte sportuitrusting",
     description: "Beantwoord een paar vragen en ontvang een persoonlijk sportpakket.",
-    url: "https://startsport.nl",
+    url: "https://www.startsport.nl",
     siteName: "StartSport",
     locale: "nl_NL",
     type: "website",
@@ -32,8 +40,8 @@ const ORGANISATIE_JSONLD = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "StartSport",
-  url: "https://startsport.nl",
-  logo: "https://startsport.nl/apple-icon",
+  url: "https://www.startsport.nl",
+  logo: "https://www.startsport.nl/apple-icon",
 };
 
 export default function RootLayout({

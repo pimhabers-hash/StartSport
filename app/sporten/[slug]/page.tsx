@@ -12,10 +12,11 @@ export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const supabase = await createClient();
   const { data: sport } = await supabase.from("sports").select("naam, beschrijving").eq("slug", slug).single();
-  if (!sport) return { title: "Sport — StartSport" };
+  if (!sport) return { title: "Sport — StartSport", alternates: { canonical: `/sporten/${slug}` } };
   return {
     title: `${sport.naam} uitrusting: koopgidsen, advies & configurator — StartSport`,
     description: sport.beschrijving ?? `Alles wat je moet weten over ${sport.naam}-uitrusting: koopgidsen, productadvies en een persoonlijke configurator.`,
+    alternates: { canonical: `/sporten/${slug}` },
   };
 }
 
@@ -68,8 +69,8 @@ export default async function SportHubPage({ params }: PageProps) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://startsport.nl" },
-      { "@type": "ListItem", position: 2, name: sport.naam, item: `https://startsport.nl/sporten/${sport.slug}` },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.startsport.nl" },
+      { "@type": "ListItem", position: 2, name: sport.naam, item: `https://www.startsport.nl/sporten/${sport.slug}` },
     ],
   };
 

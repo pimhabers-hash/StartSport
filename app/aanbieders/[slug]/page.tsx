@@ -23,8 +23,12 @@ export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const supabase = await createClient();
   const { data: provider } = await supabase.from("providers").select("naam").eq("slug", slug).single();
-  if (!provider) return { title: "Aanbieder — StartSport" };
-  return { title: `${provider.naam} — alle producten — StartSport` };
+  // Canonical wijst altijd naar de ongefilterde basis-URL — de sport/
+  // categorie/merk/geslacht-queryparams hierboven leveren allemaal
+  // dezelfde onderliggende pagina op, dus die mogen niet als losse
+  // pagina's concurreren om dezelfde zoektermen.
+  if (!provider) return { title: "Aanbieder — StartSport", alternates: { canonical: `/aanbieders/${slug}` } };
+  return { title: `${provider.naam} — alle producten — StartSport`, alternates: { canonical: `/aanbieders/${slug}` } };
 }
 
 /**

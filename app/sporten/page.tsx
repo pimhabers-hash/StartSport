@@ -6,6 +6,7 @@ import { Footer } from "@/components/home/Footer";
 export const metadata = {
   title: "Alle sporten — StartSport",
   description: "Ontdek koopgidsen, productadvies en de configurator voor elke sport die StartSport ondersteunt.",
+  alternates: { canonical: "/sporten" },
 };
 
 export default async function SportenOverzichtPage() {

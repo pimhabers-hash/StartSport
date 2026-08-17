@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/home/Navbar";
 import { Footer } from "@/components/home/Footer";
 
-export const metadata = { title: "Koopgidsen — StartSport" };
+export const metadata = { title: "Koopgidsen — StartSport", alternates: { canonical: "/advies" } };
 
 export default async function AdviesOverzichtPage() {
   const supabase = await createClient();

@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/home/Navbar";
 import { Footer } from "@/components/home/Footer";
 
-export const metadata = { title: "Privacyverklaring — StartSport" };
+export const metadata = { title: "Privacyverklaring — StartSport", alternates: { canonical: "/privacy" } };
 
 export default function PrivacyPage() {
   return (

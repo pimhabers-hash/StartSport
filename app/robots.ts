@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/admin", "/api", "/promo"],
     },
-    sitemap: "https://startsport.nl/sitemap.xml",
+    sitemap: "https://www.startsport.nl/sitemap.xml",
   };
 }

@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/home/Navbar";
 import { Footer } from "@/components/home/Footer";
 
-export const metadata = { title: "Over ons — StartSport" };
+export const metadata = { title: "Over ons — StartSport", alternates: { canonical: "/over-ons" } };
 
 export default function OverOnsPage() {
   return (

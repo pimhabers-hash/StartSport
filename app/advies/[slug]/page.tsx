@@ -23,10 +23,11 @@ export async function generateMetadata({ params }: PageProps) {
     .eq("gepubliceerd", true)
     .single();
 
-  if (!artikel) return { title: "Koopgids — StartSport" };
+  if (!artikel) return { title: "Koopgids — StartSport", alternates: { canonical: `/advies/${slug}` } };
   return {
     title: `${artikel.titel} — StartSport`,
     description: artikel.samenvatting,
+    alternates: { canonical: `/advies/${slug}` },
   };
 }
 
@@ -97,9 +98,9 @@ export default async function ArtikelPage({ params }: PageProps) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://startsport.nl" },
-      { "@type": "ListItem", position: 2, name: "Koopgidsen", item: "https://startsport.nl/advies" },
-      { "@type": "ListItem", position: 3, name: artikel.titel, item: `https://startsport.nl/advies/${slug}` },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.startsport.nl" },
+      { "@type": "ListItem", position: 2, name: "Koopgidsen", item: "https://www.startsport.nl/advies" },
+      { "@type": "ListItem", position: 3, name: artikel.titel, item: `https://www.startsport.nl/advies/${slug}` },
     ],
   };
 

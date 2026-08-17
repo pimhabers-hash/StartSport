@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/home/Navbar";
 import { Footer } from "@/components/home/Footer";
 
-export const metadata = { title: "Affiliate disclaimer — StartSport" };
+export const metadata = { title: "Affiliate disclaimer — StartSport", alternates: { canonical: "/affiliate-disclaimer" } };
 
 export default function AffiliateDisclaimerPage() {
   return (

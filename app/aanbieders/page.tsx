@@ -6,6 +6,7 @@ import { Footer } from "@/components/home/Footer";
 export const metadata = {
   title: "Onze aanbieders — StartSport",
   description: "Bekijk alle sportwinkels en merken waarmee StartSport samenwerkt, en welke sporten zij aanbieden.",
+  alternates: { canonical: "/aanbieders" },
 };
 
 interface ProviderInfo {

@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/home/Navbar";
 import { Footer } from "@/components/home/Footer";
 
-export const metadata = { title: "Cookiebeleid — StartSport" };
+export const metadata = { title: "Cookiebeleid — StartSport", alternates: { canonical: "/cookies" } };
 
 const COOKIE_TABEL = [
   { naam: "ss_session", categorie: "Noodzakelijk", doel: "Onthoudt je sessie voor affiliate-klik toewijzing", bewaartermijn: "30 dagen" },
