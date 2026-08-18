@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { syncAlleFeeds } from "@/lib/sync-feeds";
 
-// Zie app/api/cron/sync-feeds/route.ts voor de toelichting op deze waarde.
-export const maxDuration = 800;
+// 300s was de bekende, werkende waarde. Een hogere waarde (800s) leek
+// in theorie geen kwaad te kunnen, maar Vercel valideert maxDuration bij
+// het deployen tegen het actieve abonnement — een te hoge waarde kan de
+// hele deployment laten falen in plaats van 'm gewoon af te toppen.
+// Terug naar 300; de time-out per feed (zie lib/sync-feeds.ts) beperkt
+// intussen zelf al hoe lang één trage feed kan meetellen.
+export const maxDuration = 300;
 
 export async function POST() {
   // Check dat dit door een ingelogde admin wordt aangeroepen
