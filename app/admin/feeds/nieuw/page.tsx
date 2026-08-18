@@ -33,8 +33,8 @@ export default function NieuweFeedPage() {
   }, []);
 
   async function handleOpslaan() {
-    if (!naam || !feedUrl) {
-      setFout("Naam en feed-URL zijn verplicht.");
+    if (!naam || !feedUrl || !providerId) {
+      setFout("Naam, feed-URL en aanbieder zijn verplicht.");
       return;
     }
     setOpslaan(true); setFout(null);
@@ -80,7 +80,7 @@ export default function NieuweFeedPage() {
           opties={sporten}
           hulptekst="Laat leeg voor universele producten (bijv. supplementen) — die worden dan bij elke sport getoond in plaats van gekoppeld aan één specifieke sport"
         />
-        <FormVeld label="Aanbieder" naam="provider" type="select" waarde={providerId} onChange={(v) => setProviderId(v as string)} opties={providers} />
+        <FormVeld label="Aanbieder" naam="provider" type="select" verplicht waarde={providerId} onChange={(v) => setProviderId(v as string)} opties={providers} />
         <div className="grid grid-cols-2 gap-4">
           <FormVeld label="Onder = Budget" naam="grensBudget" type="number" waarde={grensBudget} onChange={(v) => setGrensBudget(v as string)} />
           <FormVeld label="Onder = Middenklasse" naam="grensMidden" type="number" waarde={grensMidden} onChange={(v) => setGrensMidden(v as string)} />

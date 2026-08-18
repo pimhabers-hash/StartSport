@@ -4,7 +4,12 @@ import { syncAlleFeeds } from "@/lib/sync-feeds";
 // Deze route wordt dagelijks aangeroepen door Vercel Cron (zie vercel.json).
 // Beveiligd met een geheime header, zodat niemand anders 'm kan triggeren.
 
-export const maxDuration = 300;
+// Gedeclareerde bovengrens — de daadwerkelijk toegestane duur hangt af
+// van het Vercel-plan/compute-type; een hogere waarde hier kan nooit
+// kwaad (Vercel dwingt zelf zijn eigen echte plafond af, ongeacht wat
+// hier staat), maar 300s bleek te krap: een volledige sync van alle
+// feeds duurt momenteel ~500s.
+export const maxDuration = 800;
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {

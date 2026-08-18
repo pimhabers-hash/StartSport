@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { syncAlleFeeds } from "@/lib/sync-feeds";
 
-export const maxDuration = 300;
+// Zie app/api/cron/sync-feeds/route.ts voor de toelichting op deze waarde.
+export const maxDuration = 800;
 
 export async function POST() {
   // Check dat dit door een ingelogde admin wordt aangeroepen
