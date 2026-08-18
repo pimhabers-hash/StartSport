@@ -46,36 +46,67 @@ const SPORT_TREFWOORDEN: Record<string, string[]> = {
   padel:      ["padel"],
   tennis:     ["tennis"],
   pickleball: ["pickleball", "pickle ball"],
-  hardlopen:  ["hardlopen", "hardloop", "running", "run", "jogging", "trailrunning", "trail running", "marathon", "atletiek", "triathlon", "swimrun"],
+  // Sommige feeds (Training Fit, Direct Running NL) leveren Franse
+  // categorienamen aan — die woorden staan hieronder erbij, telkens
+  // gevalideerd tegen echte producten uit die feeds (bijv. "Randonnée >
+  // Chaussures de randonnée" bleek gewoon "Wandelschoenen adidas..." te
+  // zijn) vóórdat ze zijn toegevoegd.
+  hardlopen:  ["hardlopen", "hardloop", "running", "run", "jogging", "trailrunning", "trail running", "marathon", "atletiek", "athlétisme", "triathlon", "swimrun"],
   fitness:    ["fitness", "gym", "yoga", "dumbbell", "kettlebell", "crossfit", "workout", "krachttraining", "pilates", "crosstraining"],
   volleybal:  ["volleybal", "volleyball", "beachvolley"],
   voetbal:    ["voetbal", "football", "soccer", "voetbalschoen", "zaalvoetbal"],
-  wandelen:   ["wandelen", "wandel", "hiking", "hike", "trekking", "nordic walking", "walking pole"],
+  wandelen:   ["wandelen", "wandel", "hiking", "hike", "trekking", "randonnée", "nordic walking", "walking pole"],
   wintersport: ["wintersport", "ski", "skiën", "snowboard", "ski touring", "skitour", "schaatsen", "schaatswinkel", "ijshockey"],
   golf:       ["golf", "golfstok", "golfstokken", "golfbal", "golfballen", "golftas", "golftassen"],
   hockey:     ["hockey", "hockeystick", "veldhockey"],
-  zwemmen:    ["zwemmen", "zwemkleding", "aquagym", "openwaterzwemmen"],
-  fietsen:    ["wielrennen", "fietsen", "mountainbike", "mountainbiken", "racefiets", "stadsfiets", "stadsfietsen", "kinderfiets", "fietsaccessoire", "fietsaccessoires"],
+  zwemmen:    ["zwemmen", "zwemkleding", "aquagym", "openwaterzwemmen", "natation"],
+  fietsen:    ["wielrennen", "fietsen", "mountainbike", "mountainbiken", "racefiets", "stadsfiets", "stadsfietsen", "kinderfiets", "fietsaccessoire", "fietsaccessoires", "cyclisme", "vtt"],
   basketbal:  ["basketbal", "basketball"],
   zeilen:     ["zeilen", "zeilboot", "sailing"],
   badminton:  ["badminton"],
-  turnen:     ["turnen", "gymnastiek", "gymnastics"],
+  turnen:     ["turnen", "gymnastiek", "gymnastics", "gymnastique"],
   tafeltennis: ["tafeltennis", "pingpong", "ping pong", "table tennis"],
   handbal:    ["handbal", "handball"],
-  klimmen:    ["klimmen", "boulderen", "klimmen en boulderen", "climbing", "bouldering"],
+  klimmen:    ["klimmen", "boulderen", "klimmen en boulderen", "climbing", "bouldering", "escalade"],
   duiken:     ["duiken", "snorkelen", "freediving", "canyoning"],
   suppen:     ["stand up paddle", "suppen", "supboard", "sup"],
   skateboarden: ["skateboarden", "skateboard", "skeeleren"],
   trampolinespringen: ["trampoline", "trampolinespringen"],
   surfen:     ["surfen", "surfplank", "kitesurfen", "windsurfen", "wakeboarden", "wing foilen", "surfing"],
   paardrijden: ["paardrijden", "ruitersport", "paardensport", "equestrian"],
+  // Nieuwe sporten — ontdekt via een audit van ongematchte categorieën
+  // in de bestaande feeds (Decathlon/Training Fit/Direct Running NL),
+  // elk gevalideerd tegen echte productnamen.
+  vechtsporten: [
+    "vechtsport", "vechtsporten", "judo", "karate", "karaté", "taekwondo",
+    "jiujitsu", "jiu-jitsu", "mma", "kungfu", "kung-fu", "capoeira",
+    "worstelen", "wrestling", "lutte", "budo", "budō", "zelfverdediging",
+  ],
+  hengelsport: ["hengelsport", "hengelen", "hengel", "hengels", "vishaak", "vishaken", "vissen", "fishing", "visserij"],
+  rugby:      ["rugby"],
+  dansen:     ["dansen", "dans", "danse", "dance", "ballet"],
+  kajakken:   ["kajakken", "kajak", "kayak", "kayaking", "kano", "kanoën"],
+  boogschieten: ["boogschieten", "boogschutter", "boogschutten", "archery"],
+  squash:     ["squash"],
+  darten:     ["darten", "dart", "darts", "dartpijl", "dartpijlen", "dartbord"],
+  honkbal:    ["honkbal", "baseball", "softbal", "softball"],
+  floorball:  ["floorball", "unihockey"],
+  // Zelfde patroon als bij "boksen" hierboven: expliciete samengestelde
+  // productnamen i.p.v. een kaal "schermen" (dat woord botst met
+  // "beeldschermen" e.d.) — gevalideerd tegen alle 12 echte producten in
+  // deze categorie bij Decathlon.
+  schermen: [
+    "schermsport", "schermschoenen", "schermbroek", "schermvest",
+    "schermtraining", "schermmasker", "rolstoelschermen",
+    "fencing", "floretschermen", "sabelschermen", "degenschermen",
+  ],
   // Losse woorden ("boksen", "kickboksen") én de meestvoorkomende
   // samengestelde productnamen expliciet — in het Nederlands plakken die
   // vast aan elkaar ("bokshandschoenen", "boksschoenen"), waardoor het
   // woord "boks" er middenin geen eigen woordgrens heeft en dus niet zou
   // matchen via het gewone \bwoord\b-patroon.
   boksen: [
-    "boksen", "kickboksen", "thaiboksen", "boks", "kickboks", "thaiboks",
+    "boksen", "kickboksen", "thaiboksen", "boks", "kickboks", "thaiboks", "boxe",
     "boksbroek", "boksbroeken", "kickboksbroek", "thaiboksbroek",
     "boksershandschoenen", "bokshandschoenen", "kickbokshandschoenen",
     "thaibokshandschoenen", "kinderbokshandschoenen", "minibokshandschoenen",
