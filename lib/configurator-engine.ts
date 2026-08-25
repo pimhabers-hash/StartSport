@@ -175,11 +175,18 @@ function productPastBijGeslacht(product: ProductMatcher, geslacht?: "man" | "vro
   return product.geslacht === geslacht;
 }
 
-// Herkent kinderproducten aan de productnaam — "\bkind\w*\b" vangt zowel
-// het losse woord "kind"/"kinderen" als aaneengeschreven samenstellingen
-// ("Kinderfiets", "Kinderbroeken", "Kinder-T-shirt"), net als de
-// vergelijkbare voorvoegsel-patronen elders in de matching-logica.
-const KINDERPRODUCT_PATROON = /\bkind\w*\b|\bjongens?\b|\bmeisjes?\b|\bjunior\b|\bkids?\b|\bchild(ren)?\b|\bboys?\b|\bgirls?\b|\bbaby'?s?\b/i;
+// Herkent kinderproducten aan de productnaam — "\w*" na elk trefwoord
+// vangt zowel het losse woord ("kind"/"jongens"/"meisjes") als
+// aaneengeschreven samenstellingen ("Kinderfiets", "Kinderbroeken"), net
+// als de vergelijkbare voorvoegsel-patronen elders in de matching-logica.
+// Alleen "kind" had die "\w*" origineel al — "Jongenspolo" glipte er
+// zo door de "\bjongens?\b"-variant heen (geen woordgrens tussen
+// "jongens" en "polo" in dat aaneengeschreven woord) en verscheen ten
+// onrechte tussen de damesresultaten. De lange, specifieke Nederlandse
+// voorvoegsels zijn nu ook verbreed — "boy"/"girl" bewust NIET, want die
+// korte Engelse woorden bleken tegen echte data valse treffers te geven
+// ("Boyd" als merknaam, "Boyfriend" als damesmode-pasvorm).
+const KINDERPRODUCT_PATROON = /\bkind\w*\b|\bjongens?\w*\b|\bmeisjes?\w*\b|\bjunior\w*\b|\bkids?\w*\b|\bchild(ren)?\w*\b|\bboys?\b|\bgirls?\b|\bbaby'?s?\w*\b/i;
 
 /**
  * True als de productnaam herkenbaar een kinderproduct is. De
