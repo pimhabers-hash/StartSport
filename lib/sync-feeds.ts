@@ -42,7 +42,7 @@ async function verwerkAbonnement(
   sporten: Sport[],
   categorieSlugPerId: Map<string, string>,
   naamMap: Map<string, Awaited<ReturnType<typeof haalAlleProducten>>[number]>,
-  eanMap: Map<string | null, Awaited<ReturnType<typeof haalAlleProducten>>[number]>
+  eanMap: Map<string, Awaited<ReturnType<typeof haalAlleProducten>>[number]>
 ): Promise<string> {
   // Claim dit abonnement atomisch via een conditionele update op
   // laatste_sync, vóórdat we de feed downloaden/verwerken. Voorkomt
@@ -109,7 +109,14 @@ async function verwerkAbonnement(
       : null;
 
     const genormaliseerdeNaam = rij.naam.toLowerCase().trim();
-    const bestaand = (rij.ean && eanMap.get(rij.ean)) ?? naamMap.get(genormaliseerdeNaam);
+    // Sleutel bevat provider_id: dezelfde naam/EAN kan legitiem bij
+    // meerdere aanbieders voorkomen (hetzelfde fysieke product via
+    // verschillende affiliate-netwerken) — zonder de provider in de
+    // sleutel zou de dedup-Map (die maar één waarde per sleutel kan
+    // vasthouden) de rij van aanbieder B laten "winnen", waarna een
+    // latere rij van aanbieder A per ongeluk B's rij overschrijft met
+    // A's prijs/affiliate-link i.p.v. zijn eigen rij bij te werken.
+    const bestaand = (rij.ean && eanMap.get(`${abo.provider_id}|${rij.ean}`)) ?? naamMap.get(`${abo.provider_id}|${genormaliseerdeNaam}`);
 
     if (!category_id) {
       overgeslagen++;
@@ -287,15 +294,22 @@ export async function syncAlleFeeds(): Promise<{ resultaten: Record<string, stri
   // kostte voorheen 11-13s per feed (bij 7 feeds dus ~80s puur verspild
   // aan hetzelfde dedup-overzicht steeds opnieuw ophalen), en at zo
   // rechtstreeks in de tijd die elke afzonderlijke feed had voor zijn
-  // eigen verwerking. Kleine kanttekening: een product dat een eerdere
-  // feed in DEZE run net heeft toegevoegd, zit dus niet meer in dit
-  // overzicht voor een latere feed — bij twee providers met toevallig
-  // exact dezelfde productnaam/EAN zou dat een dubbele insert kunnen
-  // geven, maar dat is in de praktijk zeldzaam genoeg om ruim op te
-  // wegen tegen de tijdswinst.
+  // eigen verwerking. Kanttekening: een product dat een eerdere feed in
+  // DEZE run net heeft toegevoegd, zit nog niet in dit overzicht voor een
+  // latere feed van DEZELFDE aanbieder — bij twee rijen met exact
+  // dezelfde naam/EAN binnen één feed zou dat een dubbele insert kunnen
+  // geven, maar dat vangt `nieuweNamenDitRun` hieronder al af. Tussen
+  // VERSCHILLENDE aanbieders speelt dit niet: de sleutels hieronder zijn
+  // altijd provider-gescopeerd.
   const bestaandeProducten = await haalAlleProducten(supabase);
-  const naamMap = new Map(bestaandeProducten.map((p) => [p.naam.toLowerCase().trim(), p]));
-  const eanMap = new Map(bestaandeProducten.filter((p) => p.ean).map((p) => [p.ean, p]));
+  // Sleutel op provider_id + naam/EAN, niet op naam/EAN alleen — zie de
+  // toelichting bij de lookup hieronder in verwerkAbonnement. Dezelfde
+  // productnaam komt in de praktijk bij duizenden producten voor bij
+  // meerdere aanbieders tegelijk (bijv. hetzelfde T-shirt via zowel
+  // Direct Running NL als Training Fit), en die moeten allebei hun eigen
+  // rij (met hun eigen prijs/affiliate-link) behouden.
+  const naamMap = new Map(bestaandeProducten.map((p) => [`${p.provider_id}|${p.naam.toLowerCase().trim()}`, p]));
+  const eanMap = new Map(bestaandeProducten.filter((p) => p.ean).map((p) => [`${p.provider_id}|${p.ean}`, p]));
 
   // Bewust NIET parallel: een test met alle feeds tegelijk (Decathlon
   // 58k, Direct Running 222k en Training Fit 159k rijen tegelijk in het
