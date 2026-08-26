@@ -89,7 +89,13 @@ const SPORT_TREFWOORDEN: Record<string, string[]> = {
   boogschieten: ["boogschieten", "boogschutter", "boogschutten", "archery"],
   squash:     ["squash"],
   darten:     ["darten", "dart", "darts", "dartpijl", "dartpijlen", "dartbord"],
-  honkbal:    ["honkbal", "baseball", "softbal", "softball"],
+  // Let op: GEEN kaal "baseball" — dat woord wordt door tientallen
+  // algemene kledingmerken (adidas, Craft, Napapijri, Under Armour, ...)
+  // gebruikt als generieke STIJLnaam voor een pettype ("Baseball cap
+  // adidas Aeroready"), niet als sportverwijzing. Getest tegen de echte
+  // catalogus: dat trok 40+ ongerelateerde caps naar Honkbal. "honkbal"/
+  // "honkbalpet" dekken de wél écht honkbal-specifieke producten al.
+  honkbal:    ["honkbal", "honkbalpet", "softbal", "softball"],
   floorball:  ["floorball", "unihockey"],
   // Zelfde patroon als bij "boksen" hierboven: expliciete samengestelde
   // productnamen i.p.v. een kaal "schermen" (dat woord botst met

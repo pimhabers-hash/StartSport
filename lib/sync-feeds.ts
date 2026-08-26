@@ -15,18 +15,18 @@ type FeedAbonnement = {
 type Categorie = { id: string; naam: string; slug: string };
 type Sport = { id: string; naam: string; slug: string };
 
-// Bovengrens per feed — gemeten tegen de huidige grootste feeds
-// (Decathlon: fetch+parse ~85s door een ongecomprimeerde CSV-respons;
-// Training Fit: ~37s voor 159.781 rijen) plus ruimte voor de
-// batch-upserts zelf, en voorkomt dat één ongewoon trage of extreem
-// grote feed (bijv. een merchant met een 200MB+ export) de hele
-// aanroep laat vastlopen tot aan Vercels eigen functietijdslimiet —
-// dat levert dan geen nette foutmelding op maar een kale HTML-
-// foutpagina, omdat een platform-timeout de hele functie hard afbreekt
-// vóórdat een gewone try/catch daar iets aan kan doen. Met deze eigen
-// limiet stopt ALLEEN de trage feed netjes (met een duidelijke
-// melding), en lopen de overige feeds in de rij gewoon door.
-const PER_FEED_TIJDSLIMIET_MS = 180_000;
+// Bovengrens per feed. Gemeten met faseringslogging op de zwaarste
+// feed (Decathlon, 58.986 rijen): fetch ~13s, downloaden van de
+// ONGECOMPRIMEERDE CSV-respons 66-130s (sterk wisselend, waarschijnlijk
+// omdat Decathlons server — anders dan de gzip'te Awin-feeds — geen
+// compressie aanbiedt, iets wat wij niet kunnen afdwingen), parse ~7s,
+// classificatielus ~37s, update-batches ~60s → realistisch 185-265s
+// totaal. 250s geeft daar redelijk de ruimte voor zonder de Vercel-
+// functietijdslimiet (300s, zie de sync-routes) helemaal op te souperen
+// — bij een trage download kan Decathlon dus nog steeds een keer
+// uitvallen, maar dan altijd nét met deze duidelijke melding i.p.v. een
+// kale HTML-crash, en de overige feeds in de rij lopen gewoon door.
+const PER_FEED_TIJDSLIMIET_MS = 250_000;
 
 /**
  * Verwerkt één feed-abonnement volledig: downloaden, parsen, matchen op

@@ -402,7 +402,7 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   // niet alleen de bal). Zie STERKE_BALSIGNALEN hieronder voor de wél
   // betrouwbare, specifieke variant.
   ballen:       ["bal", "ballen", "ball", "bola", "pelota"],
-  tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack", "stickbag", "cartbag", "standbag"],
+  tassen:       ["tas", "tassen", "bag", "bolsa", "mochila", "backpack", "stickbag", "cartbag", "standbag", "rugzak", "rugzakken"],
   // Kleding is opgesplitst in Bovenkleding/Onderkleding (op klantverzoek,
   // zodat je zelf uit shirts vs. broeken kunt kiezen i.p.v. één gemengde
   // stapel) — "kleding" zelf blijft bestaan als restcategorie voor
@@ -418,6 +418,11 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
   onderkleding: [
     "short", "pant", "pantalon", "trouser", "broek", "jogbroek", "joggingbroek",
     "skirt", "falda", "skort", "legging", "boardshort", "boardshorts",
+    // "rijbroek" (ruitersport) heeft, net als de andere samengestelde
+    // woorden hierboven, geen eigen woordgrens rond "broek" — zonder deze
+    // expliciete vorm viel dit alleen nog op "grip" (in bijv. "Warme
+    // rijbroek 900 grip") en belandde het ten onrechte bij Accessoires.
+    "rijbroek", "rijbroeken",
   ],
   kleding:      [
     "kleding", "cloth", "clothing", "apparel", "ropa", "textil",
@@ -429,6 +434,10 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
     // restcategorie i.p.v. bovenkleding/onderkleding.
     "badkleding", "zwemkleding", "strandkleding", "surfkleding", "turnkleding",
     "zonbescherming", "turnpakje", "turnpakjes", "wetsuit", "badpak", "badpakken", "jurk", "jurkje",
+    // "duikpak" is het Nederlandse woord voor wetsuit (Decathlons eigen
+    // subcategorie heet zelfs letterlijk "Duikpakken") — hoorde hier al
+    // conceptueel bij "wetsuit" thuis, alleen de Nederlandse vorm ontbrak.
+    "duikpak", "duikpakken",
   ],
   accessoires:  ["accessoire", "accessory", "accesorio", "grip", "overgrip", "wristband", "muneca", "sock", "calcetin", "chaussette", "sok", "sokken", "cap", "gorra", "strip", "hoes", "cover", "funda", "taskar", "taskarren", "tasaccessoire", "tasaccessoires"],
   voeding:      ["voeding", "nutrition", "suplemento", "protein", "proteina"],
@@ -453,6 +462,25 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
     "racefiets", "mountainbike", "mtb", "stadsfiets", "kinderfiets",
     "fietsband", "fietsbanden", "fietsonderdeel", "fietsonderdelen", "fietsframe", "fietswiel", "fietswielen",
   ],
+  // Vistuig (hengelsport): Decathlon voert dit zelf onder "Vis
+  // accessoires"/"Hengel merken", waardoor het zonder deze eigen
+  // categorie allemaal in de generieke Accessoires-bak verdween — 93%
+  // van alle hengelsport-producten. De productnamen zelf zijn hier al
+  // duidelijk (los woord, niet aaneengeschreven), dus geen voorvoegsel-
+  // losknip nodig.
+  vistuig: [
+    "vishaak", "vishaken", "dobber", "dobbers", "wartel", "wartels",
+    "hengelsport", "hengeltas", "hengeltassen", "voerkorf", "voerkorven",
+    "onderlijn", "onderlijnen", "aasvisser", "vistuig", "hengel", "hengels",
+  ],
+  // Rijuitrusting (paardrijden): stijgbeugels, hoofdstellen, zadels e.d.
+  // hebben geen van allen een passende bestaande categorie en vielen
+  // daardoor terug op Accessoires (93% van alle paardrijden-producten,
+  // vaak via een toevallige "Grip"-vermelding in de productnaam).
+  rijuitrusting: [
+    "stijgbeugel", "stijgbeugels", "stijgbeugelriemen", "hoofdstel", "hoofdstellen",
+    "zadel", "zadels", "teugel", "teugels", "singel", "singels", "trens", "trenzen",
+  ],
 };
 
 // Per categorie-slug: trefwoorden die ALLEEN tellen als ze in de ruwe
@@ -468,8 +496,14 @@ const CATEGORIE_TREFWOORDEN: Record<string, string[]> = {
 // vaak "Grip" ("... Pure Grip NO. 2.5"), wat normaliter al Accessoires
 // laat winnen vóórdat de ruwe categorie ooit gecheckt wordt — vandaar
 // deze aparte, voorrang-krijgende stap.
+// "boards": Decathlons eigen subcategorie "Skateboard onderdelen" is een
+// betrouwbaar signaal voor het board zelf (bijv. een "Skateboarddeck"),
+// maar zonder voorrang zou "Accessoires" al winnen via "Grip" in
+// diezelfde productnaam ("...esdoorn met grip dk100") vóórdat deze
+// subcategorie ooit gecheckt wordt — zelfde probleem als bij ballen.
 const STERKE_RUWE_CATEGORIE_SIGNALEN: Record<string, string[]> = {
   ballen: ["handballen", "basketballen"],
+  boards: ["skateboard onderdelen"],
 };
 
 // Categorieën waarvan de naam een risico op valse vangnet-matches geeft —
@@ -537,7 +571,11 @@ function bevatAlsWoord(tekst: string, trefwoord: string): boolean {
 // (dat beschrijft alleen waar de tas voor bedoeld is). Door "tassen" en
 // "schoenen" vóór "racket" te checken, wint de juiste, specifiekere
 // categorie in plaats van het eerst-gevonden woord.
-const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "bovenkleding", "onderkleding", "kleding", "ballen", "vitaminen-en-supplementen", "accessoires", "voeding", "bescherming", "racket", "clubs", "sticks", "boards", "fietsen-categorie"];
+// "vistuig"/"rijuitrusting" staan bewust vóór "accessoires": zonder die
+// voorrang zou bijv. een stijgbeugelproduct dat toevallig "Grip" in de
+// naam heeft altijd naar de generieke Accessoires-bak gaan, terwijl het
+// specifiekere trefwoord ("stijgbeugel") ook matcht.
+const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "bovenkleding", "onderkleding", "kleding", "ballen", "vitaminen-en-supplementen", "vistuig", "rijuitrusting", "accessoires", "voeding", "bescherming", "racket", "clubs", "sticks", "boards", "fietsen-categorie"];
 
 export function matchCategorie(
   ruweTekst: string,

@@ -128,7 +128,7 @@ export const MEERVOUDIGE_CATEGORIEEN = ["accessoires", "voeding", "vitaminen-en-
  * vaste lijst.
  */
 const CATEGORIE_VOLGORDE = [
-  "bovenkleding", "onderkleding", "kleding", "schoenen", "racket", "clubs", "sticks", "boards", "fietsen-categorie", "ballen", "tassen", "bescherming",
+  "bovenkleding", "onderkleding", "kleding", "schoenen", "racket", "clubs", "sticks", "boards", "fietsen-categorie", "vistuig", "rijuitrusting", "ballen", "tassen", "bescherming",
   "voeding", "vitaminen-en-supplementen", "accessoires",
 ];
 
