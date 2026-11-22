@@ -4,9 +4,19 @@ function escapeRegex(tekst: string): string {
   return tekst.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Zelfde reden als BEVAT_ALS_WOORD_CACHE in lib/feed-import.ts: regex-
+// compilatie is duur en wordt zonder cache bij elke feedrij (van
+// honderdduizenden per sync) voor dezelfde trefwoorden herhaald — de
+// hoofdoorzaak van de hoge Vercel Fluid "Active CPU"-tijd.
+const BEVAT_ALS_WOORD_CACHE = new Map<string, RegExp>();
+
 function bevatAlsWoord(tekst: string, woord: string): boolean {
   if (!woord) return false;
-  const patroon = new RegExp(`\\b${escapeRegex(woord)}s?\\b`, "i");
+  let patroon = BEVAT_ALS_WOORD_CACHE.get(woord);
+  if (!patroon) {
+    patroon = new RegExp(`\\b${escapeRegex(woord)}s?\\b`, "i");
+    BEVAT_ALS_WOORD_CACHE.set(woord, patroon);
+  }
   return patroon.test(tekst);
 }
 
@@ -24,10 +34,16 @@ const SPORT_VOORVOEGSELS = [
   "zwem", "fiets", "badminton", "tafeltennis", "handbal", "klim", "duik", "skateboard", "trampoline", "surf", "paardrijd",
 ];
 
+// Eén keer gecompileerd i.p.v. bij elke aanroep — zelfde reden als
+// BEVAT_ALS_WOORD_CACHE hierboven.
+const VOORVOEGSEL_PATRONEN = SPORT_VOORVOEGSELS.map(
+  (voorvoegsel) => new RegExp(`\\b(${voorvoegsel})([a-z])`, "gi")
+);
+
 function loskoppelSportVoorvoegsel(tekst: string): string {
   let resultaat = tekst;
-  for (const voorvoegsel of SPORT_VOORVOEGSELS) {
-    resultaat = resultaat.replace(new RegExp(`\\b(${voorvoegsel})([a-z])`, "gi"), "$1 $2");
+  for (const patroon of VOORVOEGSEL_PATRONEN) {
+    resultaat = resultaat.replace(patroon, "$1 $2");
   }
   return resultaat;
 }
@@ -154,6 +170,11 @@ const SPORT_UITSLUITINGEN: Partial<Record<string, RegExp[]>> = {
  * voorrang krijgt boven een kortere naam die er toevallig ook in
  * voorkomt (bijv. "volleybal").
  */
+// Op array-referentie i.p.v. inhoud: de aanroeper (sync-feeds.ts) geeft
+// bewust dezelfde sporten-array door voor de hele sync-run — zonder cache
+// werd deze sort per feedrij (x2, zie kandidaten-lus) onnodig herhaald.
+const GESORTEERDE_SPORTEN_CACHE = new WeakMap<Sport[], Sport[]>();
+
 export function matchSport(tekst: string, sporten: Sport[]): string | null {
   if (!tekst) return null;
 
@@ -162,6 +183,12 @@ export function matchSport(tekst: string, sporten: Sport[]): string | null {
   // aaneengeschreven productnaam als "Handbalsokken" het sport-trefwoord
   // "handbal" volledig, omdat dat er middenin geen eigen woordgrens heeft.
   const kandidaten = [tekst, loskoppelSportVoorvoegsel(tekst)];
+
+  let gesorteerdeSporten = GESORTEERDE_SPORTEN_CACHE.get(sporten);
+  if (!gesorteerdeSporten) {
+    gesorteerdeSporten = [...sporten].sort((a, b) => b.naam.length - a.naam.length);
+    GESORTEERDE_SPORTEN_CACHE.set(sporten, gesorteerdeSporten);
+  }
 
   for (const kandidaat of kandidaten) {
     for (const sport of sporten) {
@@ -174,7 +201,6 @@ export function matchSport(tekst: string, sporten: Sport[]): string | null {
       }
     }
 
-    const gesorteerdeSporten = [...sporten].sort((a, b) => b.naam.length - a.naam.length);
     for (const sport of gesorteerdeSporten) {
       const slugAlsTekst = sport.slug.replace(/-/g, " ");
       if (bevatAlsWoord(kandidaat, sport.naam) || bevatAlsWoord(kandidaat, slugAlsTekst)) {

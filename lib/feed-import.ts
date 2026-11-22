@@ -542,10 +542,16 @@ const ALGEMENE_VOORVOEGSELS = ["kinder", "dames", "heren", "junior", "senior", "
  * zodat de trefwoorden-matching hieronder ze alsnog als apart woord
  * herkent.
  */
+// Eén keer gecompileerd in plaats van bij elke aanroep — zie toelichting
+// bij BEVAT_ALS_WOORD_CACHE hierboven, zelfde reden.
+const VOORVOEGSEL_PATRONEN = [...SPORT_VOORVOEGSELS, ...ALGEMENE_VOORVOEGSELS].map(
+  (voorvoegsel) => new RegExp(`\\b(${voorvoegsel})([a-z])`, "gi")
+);
+
 function loskoppelSportVoorvoegsel(tekst: string): string {
   let resultaat = tekst;
-  for (const voorvoegsel of [...SPORT_VOORVOEGSELS, ...ALGEMENE_VOORVOEGSELS]) {
-    resultaat = resultaat.replace(new RegExp(`\\b(${voorvoegsel})([a-z])`, "gi"), "$1 $2");
+  for (const patroon of VOORVOEGSEL_PATRONEN) {
+    resultaat = resultaat.replace(patroon, "$1 $2");
   }
   return resultaat;
 }
@@ -554,6 +560,14 @@ function escapeRegex(tekst: string): string {
   return tekst.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Regexen zijn duur om te compileren en dezelfde trefwoorden komen bij
+// honderdduizenden feedrijen per sync telkens terug — zonder cache werd
+// bij elke rij opnieuw exact dezelfde RegExp aangemaakt (de hoofdoorzaak
+// van de hoge Vercel Fluid "Active CPU"-tijd bij de dagelijkse sync).
+// Eén keer compileren en hergebruiken verandert niets aan het matching-
+// gedrag, alleen aan de snelheid.
+const BEVAT_ALS_WOORD_CACHE = new Map<string, RegExp>();
+
 /**
  * Test of een trefwoord als los WOORD voorkomt in de tekst (met optioneel
  * meervoud op -s) — niet als losse substring. Dit voorkomt valse matches
@@ -561,7 +575,11 @@ function escapeRegex(tekst: string): string {
  * namen als "Baltar", "Balda", "Balto" of "Balon" (Bullpadel-kledinglijnen).
  */
 function bevatAlsWoord(tekst: string, trefwoord: string): boolean {
-  const patroon = new RegExp(`\\b${escapeRegex(trefwoord)}s?\\b`, "i");
+  let patroon = BEVAT_ALS_WOORD_CACHE.get(trefwoord);
+  if (!patroon) {
+    patroon = new RegExp(`\\b${escapeRegex(trefwoord)}s?\\b`, "i");
+    BEVAT_ALS_WOORD_CACHE.set(trefwoord, patroon);
+  }
   return patroon.test(tekst);
 }
 
@@ -576,6 +594,14 @@ function bevatAlsWoord(tekst: string, trefwoord: string): boolean {
 // naam heeft altijd naar de generieke Accessoires-bak gaan, terwijl het
 // specifiekere trefwoord ("stijgbeugel") ook matcht.
 const CATEGORIE_PRIORITEIT = ["tassen", "schoenen", "bovenkleding", "onderkleding", "kleding", "ballen", "vitaminen-en-supplementen", "vistuig", "rijuitrusting", "accessoires", "voeding", "bescherming", "racket", "clubs", "sticks", "boards", "fietsen-categorie"];
+
+// Op array-referentie i.p.v. inhoud, want de aanroeper (sync-feeds.ts)
+// geeft bewust dezelfde categorieen-array door voor de hele sync-run —
+// zie toelichting bij het gebruik hieronder.
+const GESORTEERDE_CATEGORIEEN_CACHE = new WeakMap<
+  { id: string; naam: string; slug: string }[],
+  { id: string; naam: string; slug: string }[]
+>();
 
 export function matchCategorie(
   ruweTekst: string,
@@ -613,12 +639,19 @@ export function matchCategorie(
 
   // Sorteer de meegegeven categorieën op onze vaste prioriteitsvolgorde,
   // zodat categorieën die niet in de lijst staan (aangepaste categorieën)
-  // gewoon achteraan komen, zonder te crashen.
-  const gesorteerdeCategorieen = [...categorieen].sort((a, b) => {
-    const prioA = CATEGORIE_PRIORITEIT.indexOf(a.slug);
-    const prioB = CATEGORIE_PRIORITEIT.indexOf(b.slug);
-    return (prioA === -1 ? 999 : prioA) - (prioB === -1 ? 999 : prioB);
-  });
+  // gewoon achteraan komen, zonder te crashen. Gecached op de array-
+  // referentie: de aanroeper geeft bij een sync-run steeds dezelfde
+  // categorieen-array door voor duizenden/honderdduizenden rijen — zonder
+  // cache werd deze sort daarbij evenzoveel keren onnodig herhaald.
+  let gesorteerdeCategorieen = GESORTEERDE_CATEGORIEEN_CACHE.get(categorieen);
+  if (!gesorteerdeCategorieen) {
+    gesorteerdeCategorieen = [...categorieen].sort((a, b) => {
+      const prioA = CATEGORIE_PRIORITEIT.indexOf(a.slug);
+      const prioB = CATEGORIE_PRIORITEIT.indexOf(b.slug);
+      return (prioA === -1 ? 999 : prioA) - (prioB === -1 ? 999 : prioB);
+    });
+    GESORTEERDE_CATEGORIEEN_CACHE.set(categorieen, gesorteerdeCategorieen);
+  }
 
   for (const tekst of kandidaten) {
     // Trefwoorden eerst, in prioriteitsvolgorde — dit zijn specifieke
