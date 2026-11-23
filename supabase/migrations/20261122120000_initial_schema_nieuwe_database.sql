@@ -231,6 +231,13 @@ grant select, insert, update, delete on public.configurator_results to authentic
 grant insert on public.affiliate_clicks to anon, authenticated;
 grant select, update, delete on public.affiliate_clicks to authenticated;
 
+-- service_role (lib/sync-feeds.ts en de cron-route) blijkt met
+-- "automatically grant API access" uit GEEN automatische rechten te
+-- krijgen, ook al omzeilt die rol RLS toch al volledig — vandaar
+-- expliciet alles toekennen, dit biedt geen extra veiligheidsrisico.
+grant usage on schema public to service_role;
+grant all privileges on all tables in schema public to service_role;
+
 -- sports: publiek leesbaar, admin schrijft
 create policy "sports_select_public" on public.sports for select using (true);
 create policy "sports_write_admin" on public.sports for all using (public.is_admin()) with check (public.is_admin());
