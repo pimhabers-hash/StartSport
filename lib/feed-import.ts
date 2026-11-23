@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { XMLParser } from "fast-xml-parser";
 
 const ALIASSEN: Record<string, string[]> = {
   naam:           ["naam", "productnaam", "title", "productname"],
@@ -192,6 +193,63 @@ function isZip(bytes: Uint8Array): boolean {
   return bytes[0] === 0x50 && bytes[1] === 0x4b;
 }
 
+// Sommige aanbieders (bijv. Decathlon via Odyssey/Penelope Affiliate)
+// leveren een XML-productfeed i.p.v. CSV/Excel aan — zonder deze
+// detectie viel de code terug op "behandel als CSV", wat zo'n feed
+// (vaak tientallen MB's, nagenoeg zonder newlines) als één gigantische
+// CSV-regel probeerde te splitsen: dat blokkeert de JS-event-loop zo
+// lang dat Vercel's functietijdslimiet de hele sync hard afbreekt,
+// zonder dat er ooit een foutmelding wordt opgeslagen.
+function isXml(tekst: string): boolean {
+  return /^\s*<(\?xml|[a-zA-Z])/.test(tekst.slice(0, 200));
+}
+
+/**
+ * Zet een XML-productfeed om naar het zelfde rows-formaat
+ * (headerrij + datarijen) als rijenUitTabel() voor CSV/Excel verwacht,
+ * zodat de bestaande kolomherkenning (ALIASSEN/vindKolom, inclusief de
+ * subcategories-verrijking) hergebruikt kan worden i.p.v. een losse
+ * mapping te onderhouden. Verwacht een root-element met daaronder
+ * herhaalde product-elementen (bijv. <productFeed><product>...).
+ */
+function xmlNaarRows(xmlTekst: string): unknown[][] {
+  const parser = new XMLParser({ ignoreAttributes: true, trimValues: true, ignoreDeclaration: true });
+  const geparsed = parser.parse(xmlTekst);
+
+  const root = geparsed[Object.keys(geparsed)[0]] ?? {};
+  // De product-lijst is de eerste child-property die al een array is,
+  // of (bij precies één product in de feed) een los object — in dat
+  // laatste geval normaliseren we naar een array van één.
+  let producten: unknown[] | null = null;
+  for (const key of Object.keys(root)) {
+    const waarde = root[key];
+    if (Array.isArray(waarde)) {
+      producten = waarde;
+      break;
+    }
+    if (waarde && typeof waarde === "object") {
+      producten = [waarde];
+      break;
+    }
+  }
+  if (!producten) return [];
+
+  const platgeslagenProducten = producten.map((product) => {
+    const vlak: Record<string, string> = {};
+    for (const [key, waarde] of Object.entries(product as Record<string, unknown>)) {
+      vlak[key] = typeof waarde === "object" || waarde == null ? "" : String(waarde);
+    }
+    return vlak;
+  });
+
+  // Unie van alle keys als header — XML-items kunnen in theorie
+  // onderling verschillende velden hebben, anders dan een CSV-tabel
+  // die altijd dezelfde kolommen per rij heeft.
+  const headers = Array.from(new Set(platgeslagenProducten.flatMap((p) => Object.keys(p))));
+  const dataRijen = platgeslagenProducten.map((p) => headers.map((h) => p[h] ?? ""));
+  return [headers, ...dataRijen];
+}
+
 /**
  * Verwerkt een feed-bestand tot een uniforme rijenlijst. Het echte
  * formaat wordt herkend aan de inhoud zelf (magic bytes), niet aan de
@@ -218,6 +276,11 @@ export async function parseFeedBuffer(buffer: ArrayBuffer, bestandsnaam: string)
   }
 
   const tekst = new TextDecoder("utf-8").decode(werkBuffer);
+
+  if (isXml(tekst)) {
+    return rijenUitTabel(xmlNaarRows(tekst));
+  }
+
   const scheidingsteken = detecteerScheidingsteken(tekst);
   const workbook = XLSX.read(tekst, { type: "string", FS: scheidingsteken });
   const eersteSheet = workbook.Sheets[workbook.SheetNames[0]];
