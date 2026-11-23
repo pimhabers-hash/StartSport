@@ -16,19 +16,28 @@ export default function AdminLoginPage() {
     setLaden(true);
     setFout(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: wachtwoord,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: wachtwoord,
+      });
 
-    if (error) {
-      setFout("Ongeldige inloggegevens. Controleer je e-mail en wachtwoord.");
+      if (error) {
+        setFout("Ongeldige inloggegevens. Controleer je e-mail en wachtwoord.");
+        setLaden(false);
+        return;
+      }
+
+      router.push("/admin");
+      router.refresh();
+    } catch (err) {
+      // Zonder deze catch bleef de knop bij een onverwachte fout (bv. een
+      // netwerk-/cookie-probleem) voor altijd op "Inloggen..." staan,
+      // zonder dat de gebruiker ooit iets te zien kreeg.
+      console.error("Onverwachte fout bij inloggen:", err);
+      setFout("Er ging iets mis bij het inloggen. Probeer het opnieuw.");
       setLaden(false);
-      return;
     }
-
-    router.push("/admin");
-    router.refresh();
   }
 
   return (
